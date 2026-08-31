@@ -3082,9 +3082,10 @@ async function bacaFotoDenganOCR() {
 // atau akhir teks. Dibuat generik (bukan library NLP) supaya tahan terhadap variasi hasil OCR: kadang
 // "Label : Isi" ada di satu baris, kadang Label dan Isi terpisah baris karena tabel dibaca per-kolom.
 const OCR_ALL_LABELS = [
-  'Nama Staff Pelaku','Staff Pelaku','Nama Staff','Outlet','Divisi','Pelanggaran','Total Poin',
-  'Created By','Dibuat Oleh','Approve Status','Approve By','Approve At','Approve',
-  'Deskripsi','Keterangan','Date','Created At','Updated At','Dokumen','Link'
+  'Nama Staff Pelaku','Staff Pelaku','Nama Staff','Outlet','Outot','Outle','Outlot','Divisi',
+  'Pelanggaran','Total Poin',
+  'Created By','Created 8y','Created 6y','Dibuat Oleh','Approve Status','Approve By','Approve At','Approve',
+  'Deskripsi','Deskipsi','Deksripsi','Keterangan','Date','Sate','Created At','Updated At','Dokumen','Link'
 ];
 function ocrExtractAfterLabel(text, boundaryRe, labelVariants, maxLen) {
   maxLen = maxLen || 80;
@@ -3109,14 +3110,23 @@ function parseAndFillFromOCRText(rawText) {
   const boundaryRe = OCR_ALL_LABELS.slice().sort((a,b) => b.length - a.length)
     .map(l => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
 
-  const outlet     = ocrExtractAfterLabel(text, boundaryRe, ['Outlet'], 50);
+  const outlet     = ocrExtractAfterLabel(text, boundaryRe, ['Outlet','Outot','Outle','Outlot'], 50);
   const divisiRaw  = ocrExtractAfterLabel(text, boundaryRe, ['Divisi'], 40);
   const staff      = ocrExtractAfterLabel(text, boundaryRe, ['Nama Staff Pelaku','Staff Pelaku','Nama Staff'], 60);
-  const auditor    = ocrExtractAfterLabel(text, boundaryRe, ['Created By','Dibuat Oleh'], 60);
-  const keterangan = ocrExtractAfterLabel(text, boundaryRe, ['Deskripsi','Keterangan'], 400);
+  const auditor    = ocrExtractAfterLabel(text, boundaryRe, ['Created By','Created 8y','Created 6y','Dibuat Oleh'], 60);
+  const keterangan = ocrExtractAfterLabel(text, boundaryRe, ['Deskripsi','Deskipsi','Deksripsi','Keterangan'], 400);
 
-  const urlMatch = text.match(/https?:\/\/[^\s)]+/i);
-  const link = urlMatch ? urlMatch[0].replace(/[.,;]+$/, '') : '';
+  // REVISI: address bar sering terbaca TANPA "https://" dan domainnya sendiri suka typo (mis. "fihorizon.com"
+  // padahal aslinya "ftlhorizon.com") -- karena sumbernya selalu situs Staging yang sama, domain aslinya
+  // di-hardcode & path-nya (mis. "/auditor/detail/12163") diambil dari hasil OCR apa adanya.
+  let link = '';
+  const domainMatch = text.match(/[a-z0-9.-]*horizon\.com(\/[^\s]*)?/i);
+  if (domainMatch) {
+    link = 'https://ftlhorizon.com' + (domainMatch[1] || '');
+  } else {
+    const urlMatch = text.match(/https?:\/\/[^\s)]+/i);
+    if (urlMatch) link = urlMatch[0].replace(/[.,;]+$/, '');
+  }
 
   // Petakan nama divisi hasil bacaan (mis. "Member Consultant") ke kode dropdown form (MC/PT/FO/SM/FM/OM)
   const DIVISI_MAP = {
