@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FTL Stride — Internal Audit Report</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- REVISI: Tesseract.js untuk OCR baca teks dari foto -- murni library, TANPA API key & TANPA akun -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1023,26 +1021,6 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
   <div class="page" id="page-input">
     <div class="section-title">Input Temuan Baru</div>
     <div class="section-sub">Catat temuan audit harian untuk semua outlet FTL GYM</div>
-
-    <!-- REVISI: Isi Otomatis dari Foto (OCR - Tesseract.js, tanpa API key/akun) -->
-    <div class="card" style="border:1.5px dashed var(--primary-light); background:var(--primary-pale);">
-      <div class="form-section-title">📷 Isi Otomatis dari Foto (Baca Teks / OCR)</div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-        Upload screenshot laporan (mis. dari Staging), sistem akan membaca teksnya lalu mencoba mengisi field Outlet, Divisi, Nama Staff, Nama Auditor, Keterangan Temuan, dan Link Staging secara otomatis.
-        Proses baca teks terjadi <strong>langsung di browser ini</strong> (tanpa API key, tanpa akun, tanpa kirim foto ke server mana pun).
-        <strong>Foto tidak disimpan ke database</strong> — hanya dipakai sesaat, lalu langsung dibuang dari memori.
-        Karena ini pembacaan otomatis (bukan AI yang "paham konteks"), <strong>selalu periksa ulang field yang terisi</strong> sebelum menyimpan.
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <input type="file" id="ai-photo-input" accept="image/*" style="display:none" onchange="handleTemuanPhotoSelect(this)">
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('ai-photo-input').click()">🖼️ Pilih Foto</button>
-        <button type="button" class="btn btn-success" id="btn-baca-ai" onclick="bacaFotoDenganOCR()" disabled>🔍 Baca Teks dari Foto</button>
-        <button type="button" class="btn btn-ghost" id="btn-hapus-foto" onclick="clearTemuanPhoto()" style="display:none">🗑️ Hapus Foto</button>
-        <img id="ai-photo-preview" style="display:none;max-height:70px;border-radius:6px;border:1px solid var(--border2)">
-        <span id="ai-photo-status" style="font-size:12px;color:var(--text3)"></span>
-      </div>
-    </div>
-
     <div class="card">
       <div class="form-section-title">📅 Informasi Dasar</div>
       <div class="form-grid">
@@ -2991,150 +2969,7 @@ function syncOther(field) {
 // =============================================
 // FORM
 // =============================================
-// ==== REVISI: Isi Otomatis dari Foto pakai Tesseract.js (OCR murni di browser, TANPA API key/akun) ====
-let _tempPhotoBase64 = null;  // hanya di memori, TIDAK PERNAH disimpan ke localStorage/Firebase
-let _tempPhotoMediaType = null;
-
-function handleTemuanPhotoSelect(input) {
-  const file = input.files && input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result; // format: data:image/png;base64,xxxx
-    _tempPhotoMediaType = file.type || 'image/png';
-    _tempPhotoBase64 = dataUrl.split(',')[1];
-    const preview = document.getElementById('ai-photo-preview');
-    preview.src = dataUrl;
-    preview.style.display = 'inline-block';
-    document.getElementById('btn-baca-ai').disabled = false;
-    document.getElementById('btn-hapus-foto').style.display = 'inline-block';
-    document.getElementById('ai-photo-status').textContent = '';
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearTemuanPhoto() {
-  _tempPhotoBase64 = null;
-  _tempPhotoMediaType = null;
-  const preview = document.getElementById('ai-photo-preview');
-  preview.src = ''; preview.style.display = 'none';
-  document.getElementById('ai-photo-input').value = '';
-  document.getElementById('btn-baca-ai').disabled = true;
-  document.getElementById('btn-hapus-foto').style.display = 'none';
-  document.getElementById('ai-photo-status').textContent = '';
-}
-
-async function bacaFotoDenganOCR() {
-  if (!_tempPhotoBase64) return;
-  const statusEl = document.getElementById('ai-photo-status');
-  const btn = document.getElementById('btn-baca-ai');
-  btn.disabled = true;
-
-  if (typeof Tesseract === 'undefined') {
-    toast('Library OCR (Tesseract.js) gagal dimuat. Cek koneksi internet, lalu refresh halaman.', 'error');
-    btn.disabled = false;
-    return;
-  }
-
-  try {
-    statusEl.textContent = '⏳ Menyiapkan mesin OCR (pertama kali agak lama)...';
-    const dataUrl = 'data:' + _tempPhotoMediaType + ';base64,' + _tempPhotoBase64;
-    const result = await Tesseract.recognize(dataUrl, 'ind', {
-      logger: m => {
-        if (m.status === 'recognizing text') {
-          statusEl.textContent = '⏳ Membaca teks... ' + Math.round(m.progress * 100) + '%';
-        } else {
-          statusEl.textContent = '⏳ ' + m.status + '...';
-        }
-      }
-    });
-    const rawText = result.data.text || '';
-    if (!rawText.trim()) {
-      toast('Tidak ada teks yang terbaca dari foto ini. Coba foto yang lebih jelas/tidak miring.', 'error');
-      statusEl.textContent = '';
-      btn.disabled = false;
-      return;
-    }
-    const missing = parseAndFillFromOCRText(rawText);
-    if (missing.length) {
-      toast('⚠️ Sebagian field tidak terbaca otomatis, cek & isi manual: ' + missing.join(', '), 'error');
-    } else {
-      toast('✅ Field berhasil terisi dari foto — tetap periksa dulu sebelum menyimpan.');
-    }
-    statusEl.textContent = '✅ Selesai dibaca.';
-    // REVISI: foto langsung dibuang dari memori setelah dibaca -- tidak pernah tersimpan ke mana pun
-    clearTemuanPhoto();
-  } catch (err) {
-    console.error(err);
-    statusEl.textContent = '';
-    toast('Gagal membaca foto: ' + err.message, 'error');
-    btn.disabled = false; // biarkan foto tetap ada supaya user bisa coba lagi tanpa upload ulang
-  }
-}
-
-// Cocokkan pola "Label" (diikuti ":" atau baris baru) lalu ambil isinya sampai ketemu label lain berikutnya
-// atau akhir teks. Dibuat generik (bukan library NLP) supaya tahan terhadap variasi hasil OCR: kadang
-// "Label : Isi" ada di satu baris, kadang Label dan Isi terpisah baris karena tabel dibaca per-kolom.
-const OCR_ALL_LABELS = [
-  'Nama Staff Pelaku','Staff Pelaku','Nama Staff','Outlet','Divisi','Pelanggaran','Total Poin',
-  'Created By','Dibuat Oleh','Approve Status','Approve By','Approve At','Approve',
-  'Deskripsi','Keterangan','Date','Created At','Updated At','Dokumen','Link'
-];
-function ocrExtractAfterLabel(text, boundaryRe, labelVariants) {
-  for (const label of labelVariants) {
-    const esc = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(esc + '\\s*[:\\n]?\\s*([\\s\\S]*?)(?=\\n\\s*(?:' + boundaryRe + ')\\s*[:\\n]|$)', 'i');
-    const m = text.match(re);
-    if (m && m[1]) {
-      const val = m[1].replace(/^[:\s]+/, '').replace(/\s*\n\s*/g, ' ').trim();
-      if (val) return val;
-    }
-  }
-  return '';
-}
-function parseAndFillFromOCRText(rawText) {
-  const text = rawText.replace(/\r/g, '');
-  const boundaryRe = OCR_ALL_LABELS.slice().sort((a,b) => b.length - a.length)
-    .map(l => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-
-  const outlet     = ocrExtractAfterLabel(text, boundaryRe, ['Outlet']);
-  const divisiRaw  = ocrExtractAfterLabel(text, boundaryRe, ['Divisi']);
-  const staff      = ocrExtractAfterLabel(text, boundaryRe, ['Nama Staff Pelaku','Staff Pelaku','Nama Staff']);
-  const auditor    = ocrExtractAfterLabel(text, boundaryRe, ['Created By','Dibuat Oleh']);
-  const keterangan = ocrExtractAfterLabel(text, boundaryRe, ['Deskripsi','Keterangan']);
-
-  const urlMatch = text.match(/https?:\/\/[^\s)]+/i);
-  const link = urlMatch ? urlMatch[0].replace(/[.,;]+$/, '') : '';
-
-  // Petakan nama divisi hasil bacaan (mis. "Member Consultant") ke kode dropdown form (MC/PT/FO/SM/FM/OM)
-  const DIVISI_MAP = {
-    'member consultant': 'MC', 'membership consultant': 'MC', 'mc': 'MC',
-    'personal trainer': 'PT', 'pt': 'PT',
-    'front office': 'FO', 'fo': 'FO',
-    'sales manager': 'SM', 'sm': 'SM',
-    'fitness manager': 'FM', 'fm': 'FM',
-    'outlet manager': 'OM', 'om': 'OM'
-  };
-  const divisiKode = DIVISI_MAP[(divisiRaw || '').toLowerCase().trim()] || '';
-
-  if (outlet) document.getElementById('f-outlet').value = outlet;
-  if (divisiKode) document.getElementById('f-div').value = divisiKode;
-  if (staff) document.getElementById('f-staff').value = staff;
-  if (auditor) document.getElementById('f-auditor').value = auditor;
-  if (keterangan) document.getElementById('f-ket').value = keterangan;
-  if (link) document.getElementById('f-link').value = link;
-
-  const missing = [];
-  if (!outlet) missing.push('Outlet');
-  if (!divisiKode) missing.push('Divisi');
-  if (!staff) missing.push('Nama Staff');
-  if (!auditor) missing.push('Nama Auditor');
-  if (!keterangan) missing.push('Keterangan Temuan');
-  return missing;
-}
-
 function resetForm() {
-  clearTemuanPhoto();
   ['f-tgl','f-auditor','f-outlet','f-div','f-staff','f-link','f-gdrive','f-ket','f-sanggahan'].forEach(id=>{
     const el = document.getElementById(id); if (el) el.value = '';
   });
