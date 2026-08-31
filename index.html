@@ -1041,6 +1041,10 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
         <img id="ai-photo-preview" style="display:none;max-height:70px;border-radius:6px;border:1px solid var(--border2)">
         <span id="ai-photo-status" style="font-size:12px;color:var(--text3)"></span>
       </div>
+      <div id="ocr-raw-wrap" style="display:none;margin-top:10px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">📝 Teks mentah hasil baca (kalau ada field yang tidak/salah terisi, cek/copy manual dari sini):</div>
+        <textarea id="ocr-raw-text" readonly style="width:100%;min-height:80px;font-size:11.5px;font-family:monospace;padding:8px;border:1px solid var(--border2);border-radius:6px;background:var(--surface2);color:var(--text2)"></textarea>
+      </div>
     </div>
 
     <div class="card">
@@ -3055,6 +3059,8 @@ async function bacaFotoDenganOCR() {
       btn.disabled = false;
       return;
     }
+    document.getElementById('ocr-raw-text').value = rawText.trim();
+    document.getElementById('ocr-raw-wrap').style.display = 'block';
     const missing = parseAndFillFromOCRText(rawText);
     if (missing.length) {
       toast('⚠️ Sebagian field tidak terbaca otomatis, cek & isi manual: ' + missing.join(', '), 'error');
@@ -3080,14 +3086,20 @@ const OCR_ALL_LABELS = [
   'Created By','Dibuat Oleh','Approve Status','Approve By','Approve At','Approve',
   'Deskripsi','Keterangan','Date','Created At','Updated At','Dokumen','Link'
 ];
-function ocrExtractAfterLabel(text, boundaryRe, labelVariants) {
+function ocrExtractAfterLabel(text, boundaryRe, labelVariants, maxLen) {
+  maxLen = maxLen || 80;
   for (const label of labelVariants) {
     const esc = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(esc + '\\s*[:\\n]?\\s*([\\s\\S]*?)(?=\\n\\s*(?:' + boundaryRe + ')\\s*[:\\n]|$)', 'i');
+    // REVISI: boundary TIDAK lagi mewajibkan newline sebelum label berikutnya -- hasil OCR tabel sering
+    // menyambung label & isi tanpa baris baru sama sekali, jadi deteksi batasnya cukup cari kemunculan
+    // literal label lain berikutnya di mana pun (tanpa syarat newline).
+    const re = new RegExp(esc + '\\s*:?\\s*([\\s\\S]*?)(?=\\s*(?:' + boundaryRe + ')\\s*:?|$)', 'i');
     const m = text.match(re);
     if (m && m[1]) {
-      const val = m[1].replace(/^[:\s]+/, '').replace(/\s*\n\s*/g, ' ').trim();
-      if (val) return val;
+      let val = m[1].replace(/^[:\s]+/, '').replace(/\s*\n\s*/g, ' ').trim();
+      // Kalau hasil tangkapan kepanjangan, kemungkinan besar "kebablasan" menelan beberapa field lain
+      // sekaligus (gagal ketemu batas) -- lebih aman dianggap gagal daripada isi field dengan teks acak.
+      if (val && val.length <= maxLen) return val;
     }
   }
   return '';
@@ -3097,11 +3109,11 @@ function parseAndFillFromOCRText(rawText) {
   const boundaryRe = OCR_ALL_LABELS.slice().sort((a,b) => b.length - a.length)
     .map(l => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
 
-  const outlet     = ocrExtractAfterLabel(text, boundaryRe, ['Outlet']);
-  const divisiRaw  = ocrExtractAfterLabel(text, boundaryRe, ['Divisi']);
-  const staff      = ocrExtractAfterLabel(text, boundaryRe, ['Nama Staff Pelaku','Staff Pelaku','Nama Staff']);
-  const auditor    = ocrExtractAfterLabel(text, boundaryRe, ['Created By','Dibuat Oleh']);
-  const keterangan = ocrExtractAfterLabel(text, boundaryRe, ['Deskripsi','Keterangan']);
+  const outlet     = ocrExtractAfterLabel(text, boundaryRe, ['Outlet'], 50);
+  const divisiRaw  = ocrExtractAfterLabel(text, boundaryRe, ['Divisi'], 40);
+  const staff      = ocrExtractAfterLabel(text, boundaryRe, ['Nama Staff Pelaku','Staff Pelaku','Nama Staff'], 60);
+  const auditor    = ocrExtractAfterLabel(text, boundaryRe, ['Created By','Dibuat Oleh'], 60);
+  const keterangan = ocrExtractAfterLabel(text, boundaryRe, ['Deskripsi','Keterangan'], 400);
 
   const urlMatch = text.match(/https?:\/\/[^\s)]+/i);
   const link = urlMatch ? urlMatch[0].replace(/[.,;]+$/, '') : '';
@@ -3135,6 +3147,8 @@ function parseAndFillFromOCRText(rawText) {
 
 function resetForm() {
   clearTemuanPhoto();
+  document.getElementById('ocr-raw-wrap').style.display = 'none';
+  document.getElementById('ocr-raw-text').value = '';
   ['f-tgl','f-auditor','f-outlet','f-div','f-staff','f-link','f-gdrive','f-ket','f-sanggahan'].forEach(id=>{
     const el = document.getElementById(id); if (el) el.value = '';
   });
