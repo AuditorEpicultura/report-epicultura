@@ -835,6 +835,10 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
   #month-selector { min-width:90px !important; font-size:10px; }
   .btn-sm { padding:4px 7px; font-size:10px; }
 }
+
+/* OCR: field yang terisi otomatis dari foto */
+.ocr-filled { background:#ecfdf5 !important; border-color:#10b981 !important; box-shadow:0 0 0 2px rgba(16,185,129,.15); }
+.ocr-drag { background:#dbeafe !important; border-color:var(--primary) !important; }
 </style>
 </head>
 <body>
@@ -1025,18 +1029,19 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
     <div class="section-sub">Catat temuan audit harian untuk semua outlet FTL GYM</div>
 
     <!-- REVISI: Isi Otomatis dari Foto (OCR - Tesseract.js, tanpa API key/akun) -->
-    <div class="card" style="border:1.5px dashed var(--primary-light); background:var(--primary-pale);">
+    <div class="card" style="border:1.5px dashed var(--primary-light); background:var(--primary-pale);"
+      ondragover="event.preventDefault();this.classList.add('ocr-drag')" ondragleave="this.classList.remove('ocr-drag')" ondrop="ocrHandleDrop(event)">
       <div class="form-section-title">📷 Isi Otomatis dari Foto (Baca Teks / OCR)</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-        Upload screenshot laporan (mis. dari Staging), sistem akan membaca teksnya lalu mencoba mengisi field Outlet, Divisi, Nama Staff, Nama Auditor, Keterangan Temuan, dan Link Staging secara otomatis.
-        Proses baca teks terjadi <strong>langsung di browser ini</strong> (tanpa API key, tanpa akun, tanpa kirim foto ke server mana pun).
-        <strong>Foto tidak disimpan ke database</strong> — hanya dipakai sesaat, lalu langsung dibuang dari memori.
-        Karena ini pembacaan otomatis (bukan AI yang "paham konteks"), <strong>selalu periksa ulang field yang terisi</strong> sebelum menyimpan.
+        Masukkan screenshot <strong>Detail Laporan</strong> dari Staging dengan cara <strong>Pilih Foto</strong>, <strong>tarik &amp; lepas</strong> ke kotak ini, atau <strong>paste (Ctrl+V)</strong>. Foto langsung dibaca otomatis.
+        Label di kolom kiri (Outlet, Divisi, Nama Staff Pelaku, Pelanggaran, Created By, Deskripsi, Date) menentukan field yang diisi, dan isi di kolom kanan menjadi nilainya.
+        Tanggal, Week, dan Jenis Temuan ditebak dari Deskripsi/Pelanggaran. Field yang sudah Anda isi manual <strong>tidak ditimpa</strong>, dan field hasil foto ditandai <span style="background:#ecfdf5;border:1px solid #10b981;border-radius:4px;padding:0 4px">hijau</span>.
+        Proses berjalan <strong>di browser ini</strong> dan foto <strong>tidak disimpan</strong>. Selalu periksa ulang sebelum menyimpan.
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <input type="file" id="ai-photo-input" accept="image/*" style="display:none" onchange="handleTemuanPhotoSelect(this)">
         <button type="button" class="btn btn-ghost" onclick="document.getElementById('ai-photo-input').click()">🖼️ Pilih Foto</button>
-        <button type="button" class="btn btn-success" id="btn-baca-ai" onclick="bacaFotoDenganOCR()" disabled>🔍 Baca Teks dari Foto</button>
+        <button type="button" class="btn btn-success" id="btn-baca-ai" onclick="bacaFotoDenganOCR()" disabled>🔍 Baca Ulang</button>
         <button type="button" class="btn btn-ghost" id="btn-hapus-foto" onclick="clearTemuanPhoto()" style="display:none">🗑️ Hapus Foto</button>
         <img id="ai-photo-preview" style="display:none;max-height:70px;border-radius:6px;border:1px solid var(--border2)">
         <span id="ai-photo-status" style="font-size:12px;color:var(--text3)"></span>
@@ -1896,6 +1901,7 @@ function navigate(page) {
   else if (page==='divisi') renderDivisi();
   else if (page==='staff') renderStaffTracker();
   else if (page==='presentasi') renderPresentasi();
+  else if (page==='input' && typeof ocrWarmUp==='function') ocrWarmUp();
 }
 
 function filterWeek(w, el) {
@@ -2995,92 +3001,299 @@ function syncOther(field) {
 // =============================================
 // FORM
 // =============================================
-// ==== REVISI: Isi Otomatis dari Foto pakai Tesseract.js (OCR murni di browser, TANPA API key/akun) ====
-let _tempPhotoBase64 = null;  // hanya di memori, TIDAK PERNAH disimpan ke localStorage/Firebase
-let _tempPhotoMediaType = null;
+// ==== Isi Otomatis dari Foto — OCR Tesseract.js (di browser, TANPA API key/akun) ====
+// Cara kerja (mengikuti layout halaman Detail Laporan di Staging):
+//   • Kolom KIRI  = nama kolom / label (Outlet, Divisi, Nama Staff Pelaku, Created By, Deskripsi, Date, ...)
+//                   → menjadi "syarat": menentukan field form mana yang diisi.
+//   • Kolom KANAN = isi / nilai → dipakai untuk mengisi field tersebut.
+// Label & isi dipasangkan berdasarkan POSISI BARIS di gambar (koordinat hasil OCR), bukan urutan teks,
+// sehingga tetap akurat walaupun OCR membaca tabel per-kolom. Kalau layout tidak terdeteksi, fallback
+// ke pencarian berbasis teks. Field yang sudah diisi manual oleh user TIDAK ditimpa.
+let _tempPhotoDataUrl = null;   // hanya di memori, TIDAK PERNAH disimpan ke localStorage/Firebase
+let _ocrWorkerPromise = null;   // worker Tesseract dipakai ulang → foto ke-2 dst jauh lebih cepat
+let _ocrProgressCb = null;
+let _ocrBusy = false;
+
+function ocrGetWorker() {
+  if (typeof Tesseract === 'undefined') return Promise.reject(new Error('Library OCR (Tesseract.js) gagal dimuat. Cek koneksi internet, lalu refresh halaman.'));
+  if (!_ocrWorkerPromise) {
+    _ocrWorkerPromise = Tesseract.createWorker('ind', 1, {
+      logger: m => { if (_ocrProgressCb) _ocrProgressCb(m); }
+    }).then(async w => {
+      // PSM 6 (satu blok teks seragam): paling akurat untuk tabel "Label : Isi" seperti Detail Laporan Staging
+      await w.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
+      return w;
+    }).catch(err => { _ocrWorkerPromise = null; throw err; });
+  }
+  return _ocrWorkerPromise;
+}
+// Dipanggil saat halaman Input dibuka: siapkan mesin OCR di belakang layar supaya saat foto masuk langsung jalan
+function ocrWarmUp() { ocrGetWorker().catch(() => {}); }
 
 function handleTemuanPhotoSelect(input) {
   const file = input.files && input.files[0];
-  if (!file) return;
+  if (file) loadTemuanPhotoFile(file);
+}
+
+function loadTemuanPhotoFile(file) {
+  if (!file || !/^image\//i.test(file.type || '')) { toast('File harus berupa gambar (PNG/JPG)', 'error'); return; }
+  if (_ocrBusy) { toast('Masih membaca foto sebelumnya, tunggu sebentar...', 'error'); return; }
   const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result; // format: data:image/png;base64,xxxx
-    _tempPhotoMediaType = file.type || 'image/png';
-    _tempPhotoBase64 = dataUrl.split(',')[1];
+  reader.onload = e => {
+    _tempPhotoDataUrl = e.target.result;
     const preview = document.getElementById('ai-photo-preview');
-    preview.src = dataUrl;
+    preview.src = _tempPhotoDataUrl;
     preview.style.display = 'inline-block';
     document.getElementById('btn-baca-ai').disabled = false;
     document.getElementById('btn-hapus-foto').style.display = 'inline-block';
-    document.getElementById('ai-photo-status').textContent = '';
+    bacaFotoDenganOCR(); // langsung dibaca otomatis, tidak perlu klik tombol lagi
   };
   reader.readAsDataURL(file);
 }
 
 function clearTemuanPhoto() {
-  _tempPhotoBase64 = null;
-  _tempPhotoMediaType = null;
+  _tempPhotoDataUrl = null;
   const preview = document.getElementById('ai-photo-preview');
   preview.src = ''; preview.style.display = 'none';
   document.getElementById('ai-photo-input').value = '';
   document.getElementById('btn-baca-ai').disabled = true;
   document.getElementById('btn-hapus-foto').style.display = 'none';
-  document.getElementById('ai-photo-status').textContent = '';
+}
+
+// Paste screenshot langsung (Ctrl+V) saat berada di halaman Input
+document.addEventListener('paste', e => {
+  const page = document.getElementById('page-input');
+  if (!page || !page.classList.contains('active')) return;
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  for (const it of items) {
+    if (it.kind === 'file' && /^image\//i.test(it.type)) {
+      e.preventDefault();
+      loadTemuanPhotoFile(it.getAsFile());
+      return;
+    }
+  }
+});
+function ocrHandleDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('ocr-drag');
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) loadTemuanPhotoFile(f);
+}
+
+// Perbesar + grayscale + kontras → teks kecil di screenshot jauh lebih mudah dibaca OCR
+function ocrPrepareImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.max(1, Math.min(2.5, 2600 / Math.max(img.width, img.height)));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      const id = ctx.getImageData(0, 0, c.width, c.height);
+      const p = id.data;
+      let sum = 0;
+      for (let i = 0; i < p.length; i += 4) sum += 0.299*p[i] + 0.587*p[i+1] + 0.114*p[i+2];
+      const invert = (sum / (p.length / 4)) < 110; // screenshot mode gelap → dibalik jadi teks gelap di latar terang
+      for (let i = 0; i < p.length; i += 4) {
+        let g = 0.299*p[i] + 0.587*p[i+1] + 0.114*p[i+2];
+        if (invert) g = 255 - g;
+        g = (g - 128) * 1.4 + 128;
+        g = g < 0 ? 0 : g > 255 ? 255 : g;
+        p[i] = p[i+1] = p[i+2] = g;
+      }
+      ctx.putImageData(id, 0, 0);
+      resolve(c);
+    };
+    img.onerror = () => reject(new Error('Gambar tidak bisa dibuka'));
+    img.src = dataUrl;
+  });
 }
 
 async function bacaFotoDenganOCR() {
-  if (!_tempPhotoBase64) return;
+  if (!_tempPhotoDataUrl || _ocrBusy) return;
+  _ocrBusy = true;
   const statusEl = document.getElementById('ai-photo-status');
   const btn = document.getElementById('btn-baca-ai');
   btn.disabled = true;
-
-  if (typeof Tesseract === 'undefined') {
-    toast('Library OCR (Tesseract.js) gagal dimuat. Cek koneksi internet, lalu refresh halaman.', 'error');
-    btn.disabled = false;
-    return;
-  }
-
   try {
-    statusEl.textContent = '⏳ Menyiapkan mesin OCR (pertama kali agak lama)...';
-    const dataUrl = 'data:' + _tempPhotoMediaType + ';base64,' + _tempPhotoBase64;
-    const result = await Tesseract.recognize(dataUrl, 'ind', {
-      logger: m => {
-        if (m.status === 'recognizing text') {
-          statusEl.textContent = '⏳ Membaca teks... ' + Math.round(m.progress * 100) + '%';
-        } else {
-          statusEl.textContent = '⏳ ' + m.status + '...';
-        }
-      }
-    });
-    const rawText = result.data.text || '';
-    if (!rawText.trim()) {
-      toast('Tidak ada teks yang terbaca dari foto ini. Coba foto yang lebih jelas/tidak miring.', 'error');
-      statusEl.textContent = '';
-      btn.disabled = false;
-      return;
-    }
+    statusEl.textContent = '⏳ Menyiapkan gambar...';
+    const canvas = await ocrPrepareImage(_tempPhotoDataUrl);
+    _ocrProgressCb = m => {
+      if (m.status === 'recognizing text') statusEl.textContent = '⏳ Membaca teks... ' + Math.round((m.progress || 0) * 100) + '%';
+      else if (m.status) statusEl.textContent = '⏳ ' + m.status + ' (pertama kali agak lama)...';
+    };
+    statusEl.textContent = '⏳ Menyiapkan mesin OCR...';
+    const worker = await ocrGetWorker();
+    const { data } = await worker.recognize(canvas);
+    _ocrProgressCb = null;
+
+    const rawText = (data && data.text) || '';
+    if (!rawText.trim()) throw new Error('Tidak ada teks yang terbaca. Coba foto yang lebih jelas / tidak miring.');
     document.getElementById('ocr-raw-text').value = rawText.trim();
     document.getElementById('ocr-raw-wrap').style.display = 'block';
-    const missing = parseAndFillFromOCRText(rawText);
-    if (missing.length) {
-      toast('⚠️ Sebagian field tidak terbaca otomatis, cek & isi manual: ' + missing.join(', '), 'error');
-    } else {
-      toast('✅ Field berhasil terisi dari foto — tetap periksa dulu sebelum menyimpan.');
-    }
-    statusEl.textContent = '✅ Selesai dibaca.';
-    // REVISI: foto langsung dibuang dari memori setelah dibaca -- tidak pernah tersimpan ke mana pun
-    clearTemuanPhoto();
+
+    const { filled, kept, missing } = parseAndFillFromOCR(data);
+    let msg = '✅ ' + filled.length + ' field terisi otomatis';
+    if (kept.length) msg += ' · ' + kept.length + ' field isian manual dipertahankan';
+    statusEl.textContent = msg + (missing.length ? ' · belum terbaca: ' + missing.join(', ') : '');
+    if (missing.length) toast('⚠️ Cek & isi manual: ' + missing.join(', '), 'error');
+    else toast('✅ Form terisi dari foto — periksa field berwarna hijau sebelum menyimpan.');
+    clearTemuanPhoto(); // foto langsung dibuang dari memori setelah dibaca
   } catch (err) {
     console.error(err);
+    _ocrProgressCb = null;
     statusEl.textContent = '';
     toast('Gagal membaca foto: ' + err.message, 'error');
-    btn.disabled = false; // biarkan foto tetap ada supaya user bisa coba lagi tanpa upload ulang
+    btn.disabled = !_tempPhotoDataUrl; // foto tetap ada → bisa klik "Baca Teks" untuk coba lagi
+  } finally {
+    _ocrBusy = false;
   }
 }
 
-// Cocokkan pola "Label" (diikuti ":" atau baris baru) lalu ambil isinya sampai ketemu label lain berikutnya
-// atau akhir teks. Dibuat generik (bukan library NLP) supaya tahan terhadap variasi hasil OCR: kadang
-// "Label : Isi" ada di satu baris, kadang Label dan Isi terpisah baris karena tabel dibaca per-kolom.
+// ---------- Aturan label (kolom kiri) → field ----------
+const OCR_FIELDS = [
+  { key:'outlet',      labels:['outlet','outot','outle','outlot'] },
+  { key:'divisi',      labels:['divisi','division'] },
+  { key:'staff',       labels:['nama staff pelaku','staff pelaku','nama staff','nama pelaku'] },
+  { key:'pelanggaran', labels:['pelanggaran','jenis pelanggaran'] },
+  { key:'poin',        labels:['total poin','poin'] },
+  { key:'auditor',     labels:['created by','dibuat oleh'] },
+  { key:'approve',     labels:['approve','approval'] },
+  { key:'deskripsi',   labels:['deskripsi','keterangan','description'] },
+  { key:'date',        labels:['date','tanggal'] },
+  { key:'_header',     labels:['detail laporan'] },
+];
+
+function ocrNorm(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function ocrLev(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({length:n+1}, (_, j) => j), cur = new Array(n+1);
+  for (let i = 1; i <= m; i++) {
+    cur[0] = i;
+    for (let j = 1; j <= n; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    [prev, cur] = [cur, prev];
+  }
+  return prev[n];
+}
+function ocrSimilar(a, b) { return (!a || !b) ? 0 : 1 - ocrLev(a, b) / Math.max(a.length, b.length); }
+
+// Cocokkan teks dengan label secara toleran (typo OCR seperti "Outot", "Created 8y", "Deskipsi" tetap kena)
+function ocrMatchLabel(text) {
+  const t = ocrNorm(text).replace(/[0-9]/g, d => ({'0':'o','1':'l','5':'s','6':'b','8':'b'})[d] || d);
+  if (!t || t.length < 3) return null;
+  let best = null;
+  for (const f of OCR_FIELDS) for (const l of f.labels) {
+    const s = ocrSimilar(t, l);
+    if (s >= 0.72 && (!best || s > best.score)) best = { key: f.key, score: s };
+  }
+  return best;
+}
+
+function ocrMedian(arr) {
+  if (!arr.length) return 0;
+  const s = arr.slice().sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)];
+}
+
+// Pecah setiap baris OCR menjadi "segmen" berdasarkan jarak horizontal yang lebar
+// (label | : | isi biasanya dipisah spasi lebar walau OCR menganggapnya 1 baris)
+function ocrSegments(data) {
+  const segs = [];
+  let lines = data.lines || [];
+  if (!lines.length && data.blocks) // beberapa versi Tesseract.js hanya mengisi blocks → paragraphs → lines
+    data.blocks.forEach(b => (b.paragraphs || []).forEach(p => (p.lines || []).forEach(l => lines.push(l))));
+  lines.forEach(line => {
+    const words = (line.words || []).filter(w => w.text && w.text.trim() && w.bbox);
+    if (!words.length) return;
+    const h = ocrMedian(words.map(w => w.bbox.y1 - w.bbox.y0)) || 10;
+    let cur = null;
+    words.forEach(w => {
+      if (cur && (w.bbox.x0 - cur.x1) > h * 3) { segs.push(cur); cur = null; } // jarak antar-kolom jauh > jarak antar-kata
+      if (!cur) cur = { words: [], x0: w.bbox.x0, x1: w.bbox.x1, y0: w.bbox.y0, y1: w.bbox.y1, h };
+      cur.words.push({ text: w.text.trim(), x0: w.bbox.x0, x1: w.bbox.x1 });
+      cur.x1 = Math.max(cur.x1, w.bbox.x1);
+      cur.y0 = Math.min(cur.y0, w.bbox.y0);
+      cur.y1 = Math.max(cur.y1, w.bbox.y1);
+    });
+    if (cur) segs.push(cur);
+  });
+  segs.forEach(s => {
+    s.text = s.words.map(w => w.text).join(' ').trim();
+    s.yc = (s.y0 + s.y1) / 2;
+  });
+  // segmen yang isinya hanya tanda ":" / garis dibuang
+  return segs.filter(s => s.text.replace(/[\s:;|.,\-_=]/g, '').length > 0);
+}
+
+// Pasangkan label (kolom kiri) dengan isi (kolom kanan) berdasarkan posisi baris
+function ocrParseLayout(data) {
+  const segs = ocrSegments(data);
+  if (!segs.length) return null;
+  const hMed = ocrMedian(segs.map(s => s.h)) || 10;
+
+  // 1) Kandidat label: awal segmen (1–4 kata) yang cocok dengan salah satu label
+  const cands = [];
+  segs.forEach(s => {
+    for (let n = Math.min(4, s.words.length); n >= 1; n--) {
+      const m = ocrMatchLabel(s.words.slice(0, n).map(w => w.text).join(' '));
+      if (m) { cands.push({ seg: s, n, key: m.key, score: m.score, x0: s.x0, x1: s.words[n-1].x1, yc: s.yc }); break; }
+    }
+  });
+  if (cands.length < 2) return null;
+
+  // 2) Kolom label = posisi X (kiri) yang paling banyak didukung kandidat
+  const tol = hMed * 3;
+  let colX = null, bestCount = 0;
+  cands.forEach(c => {
+    const cnt = cands.filter(o => Math.abs(o.x0 - c.x0) < tol).length;
+    if (cnt > bestCount || (cnt === bestCount && c.x0 < colX)) { bestCount = cnt; colX = c.x0; }
+  });
+  let labels = cands.filter(c => Math.abs(c.x0 - colX) < tol);
+  // label kembar → ambil yang paling mirip
+  const byKey = {};
+  labels.forEach(c => { if (!byKey[c.key] || c.score > byKey[c.key].score) byKey[c.key] = c; });
+  labels = Object.values(byKey).sort((a, b) => a.yc - b.yc);
+  if (labels.filter(l => l.key !== '_header').length < 2) return null;
+
+  // 3) Kumpulkan segmen isi: segmen di kanan kolom label + sisa kata di segmen label ("Outlet : Tomang")
+  const labelSegs = new Set(labels.map(l => l.seg));
+  const labelRight = Math.max(...labels.map(l => l.x1));
+  const values = [];
+  labels.forEach(l => {
+    const rest = l.seg.words.slice(l.n);
+    if (rest.length) values.push({ text: rest.map(w => w.text).join(' '), yc: l.yc, x0: rest[0].x0 });
+  });
+  segs.forEach(s => {
+    if (!labelSegs.has(s) && s.x0 > labelRight - hMed * 0.5) values.push({ text: s.text, yc: s.yc, x0: s.x0 });
+  });
+
+  // 4) Setiap isi masuk ke label yang barisnya paling dekat (maks. ¾ jarak antar-baris label)
+  const gaps = [];
+  for (let i = 1; i < labels.length; i++) gaps.push(labels[i].yc - labels[i-1].yc);
+  const limit = Math.max(hMed * 1.5, (ocrMedian(gaps) || hMed * 4) * 0.75);
+  const out = {};
+  values.forEach(v => {
+    let best = null, bestD = Infinity;
+    labels.forEach(l => { const d = Math.abs(v.yc - l.yc); if (d < bestD) { bestD = d; best = l; } });
+    if (!best || bestD > limit) return;
+    const txt = v.text.replace(/^[\s:;|.,\-_]+/, '').trim();
+    if (txt) (out[best.key] = out[best.key] || []).push({ text: txt, yc: v.yc, x0: v.x0 });
+  });
+  const result = {};
+  Object.keys(out).forEach(k => {
+    result[k] = out[k].sort((a, b) => (Math.abs(a.yc - b.yc) < hMed * 0.5 ? a.x0 - b.x0 : a.yc - b.yc)).map(v => v.text);
+  });
+  return result;
+}
+
+// Fallback berbasis teks (dipakai kalau layout tabel tidak terdeteksi)
 const OCR_ALL_LABELS = [
   'Nama Staff Pelaku','Staff Pelaku','Nama Staff','Outlet','Outot','Outle','Outlot','Divisi',
   'Pelanggaran','Total Poin',
@@ -3091,72 +3304,205 @@ function ocrExtractAfterLabel(text, boundaryRe, labelVariants, maxLen) {
   maxLen = maxLen || 80;
   for (const label of labelVariants) {
     const esc = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // REVISI: boundary TIDAK lagi mewajibkan newline sebelum label berikutnya -- hasil OCR tabel sering
-    // menyambung label & isi tanpa baris baru sama sekali, jadi deteksi batasnya cukup cari kemunculan
-    // literal label lain berikutnya di mana pun (tanpa syarat newline).
     const re = new RegExp(esc + '\\s*:?\\s*([\\s\\S]*?)(?=\\s*(?:' + boundaryRe + ')\\s*:?|$)', 'i');
     const m = text.match(re);
     if (m && m[1]) {
-      let val = m[1].replace(/^[:\s]+/, '').replace(/\s*\n\s*/g, ' ').trim();
-      // Kalau hasil tangkapan kepanjangan, kemungkinan besar "kebablasan" menelan beberapa field lain
-      // sekaligus (gagal ketemu batas) -- lebih aman dianggap gagal daripada isi field dengan teks acak.
+      const val = m[1].replace(/^[:\s]+/, '').replace(/\s*\n\s*/g, ' ').trim();
       if (val && val.length <= maxLen) return val;
     }
   }
   return '';
 }
-function parseAndFillFromOCRText(rawText) {
+function ocrParseText(rawText) {
   const text = rawText.replace(/\r/g, '');
-  const boundaryRe = OCR_ALL_LABELS.slice().sort((a,b) => b.length - a.length)
+  const boundaryRe = OCR_ALL_LABELS.slice().sort((a, b) => b.length - a.length)
     .map(l => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-
-  const outlet     = ocrExtractAfterLabel(text, boundaryRe, ['Outlet','Outot','Outle','Outlot'], 50);
-  const divisiRaw  = ocrExtractAfterLabel(text, boundaryRe, ['Divisi'], 40);
-  const staff      = ocrExtractAfterLabel(text, boundaryRe, ['Nama Staff Pelaku','Staff Pelaku','Nama Staff'], 60);
-  const auditor    = ocrExtractAfterLabel(text, boundaryRe, ['Created By','Created 8y','Created 6y','Dibuat Oleh'], 60);
-  const keterangan = ocrExtractAfterLabel(text, boundaryRe, ['Deskripsi','Deskipsi','Deksripsi','Keterangan'], 400);
-
-  // REVISI: address bar sering terbaca TANPA "https://" dan domainnya sendiri suka typo (mis. "fihorizon.com"
-  // padahal aslinya "ftlhorizon.com") -- karena sumbernya selalu situs Staging yang sama, domain aslinya
-  // di-hardcode & path-nya (mis. "/auditor/detail/12163") diambil dari hasil OCR apa adanya.
-  let link = '';
-  const domainMatch = text.match(/[a-z0-9.-]*horizon\.com(\/[^\s]*)?/i);
-  if (domainMatch) {
-    link = 'https://ftlhorizon.com' + (domainMatch[1] || '');
-  } else {
-    const urlMatch = text.match(/https?:\/\/[^\s)]+/i);
-    if (urlMatch) link = urlMatch[0].replace(/[.,;]+$/, '');
-  }
-
-  // Petakan nama divisi hasil bacaan (mis. "Member Consultant") ke kode dropdown form (MC/PT/FO/SM/FM/OM)
-  const DIVISI_MAP = {
-    'member consultant': 'MC', 'membership consultant': 'MC', 'mc': 'MC',
-    'personal trainer': 'PT', 'pt': 'PT',
-    'front office': 'FO', 'fo': 'FO',
-    'sales manager': 'SM', 'sm': 'SM',
-    'fitness manager': 'FM', 'fm': 'FM',
-    'outlet manager': 'OM', 'om': 'OM'
+  const pick = (variants, max) => { const v = ocrExtractAfterLabel(text, boundaryRe, variants, max); return v ? [v] : undefined; };
+  return {
+    outlet:      pick(['Outlet','Outot','Outle','Outlot'], 50),
+    divisi:      pick(['Divisi'], 40),
+    staff:       pick(['Nama Staff Pelaku','Staff Pelaku','Nama Staff'], 60),
+    pelanggaran: pick(['Pelanggaran'], 120),
+    auditor:     pick(['Created By','Created 8y','Created 6y','Dibuat Oleh'], 60),
+    deskripsi:   pick(['Deskripsi','Deskipsi','Deksripsi','Keterangan'], 600),
+    date:        pick(['Created At','Date','Sate'], 60),
   };
-  const divisiKode = DIVISI_MAP[(divisiRaw || '').toLowerCase().trim()] || '';
+}
 
-  if (outlet) document.getElementById('f-outlet').value = outlet;
-  if (divisiKode) document.getElementById('f-div').value = divisiKode;
-  if (staff) document.getElementById('f-staff').value = staff;
-  if (auditor) document.getElementById('f-auditor').value = auditor;
-  if (keterangan) document.getElementById('f-ket').value = keterangan;
-  if (link) document.getElementById('f-link').value = link;
+// ---------- Interpretasi isi ----------
+function ocrClean(s) {
+  return (s || '').replace(/[|{}\[\]_~`]/g, ' ').replace(/^[\s:;.,\-]+/, '').replace(/\s+/g, ' ').trim();
+}
 
-  const missing = [];
-  if (!outlet) missing.push('Outlet');
-  if (!divisiKode) missing.push('Divisi');
-  if (!staff) missing.push('Nama Staff');
-  if (!auditor) missing.push('Nama Auditor');
-  if (!keterangan) missing.push('Keterangan Temuan');
-  return missing;
+function ocrMatchList(val, listId, minScore) {
+  const v = ocrNorm(val);
+  if (!v) return val;
+  let best = null, bestS = 0;
+  document.querySelectorAll('#' + listId + ' option').forEach(o => {
+    const s = ocrSimilar(v, ocrNorm(o.value || o.textContent));
+    if (s > bestS) { bestS = s; best = (o.value || o.textContent).trim(); }
+  });
+  return (best && bestS >= (minScore || 0.8)) ? best : val;
+}
+
+function ocrMapDivisi(raw) {
+  const t = ocrNorm(raw);
+  if (!t) return '';
+  if (/outlet\s*man|\bom\b/.test(t)) return 'OM';
+  if (/fitness|\bfm\b/.test(t)) return 'FM';
+  if (/sales|\bsm\b/.test(t)) return 'SM';
+  if (/front|office|\bfo\b/.test(t)) return 'FO';
+  if (/trainer|personal|\bpt\b/.test(t)) return 'PT';
+  if (/consult|member|\bmc\b/.test(t)) return 'MC';
+  const names = { MC:'membership consultant', PT:'personal trainer', FO:'front office', SM:'sales manager', FM:'fitness manager', OM:'outlet manager' };
+  let best = '', bestS = 0;
+  Object.entries(names).forEach(([k, n]) => { const s = ocrSimilar(t, n); if (s > bestS) { bestS = s; best = k; } });
+  return bestS >= 0.6 ? best : '';
+}
+
+const OCR_MONTHS = { jan:1, feb:2, peb:2, mar:3, apr:4, mei:5, may:5, jun:6, jul:7, agu:8, agt:8, aug:8, sep:9, okt:10, oct:10, nov:11, nop:11, des:12, dec:12 };
+function ocrMonthNum(tok) {
+  const t = (tok || '').toLowerCase().replace(/0/g, 'o').replace(/1/g, 'l');
+  if (t.length < 3) return 0;
+  if (OCR_MONTHS[t.slice(0, 3)]) return OCR_MONTHS[t.slice(0, 3)];
+  const full = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
+  let best = 0, bestS = 0;
+  full.forEach((m, i) => { const s = ocrSimilar(t, m); if (s > bestS) { bestS = s; best = i + 1; } });
+  return bestS >= 0.6 ? best : 0;
+}
+// Cari tanggal di teks: "02 Oktober 2026", "2 Okt", "02/10/2026", "2026-10-02"
+function ocrFindDate(text, fallbackYear) {
+  if (!text) return '';
+  const fmt = (y, m, d) => (y >= 2000 && y <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31)
+    ? `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` : '';
+  let m;
+  const reName = /(\d{1,2})\s*[-\/ ]?\s*([a-z0]{3,})\.?(?:\s*[-\/ ,]?\s*(\d{4}))?/gi;
+  while ((m = reName.exec(text))) {
+    const mon = ocrMonthNum(m[2]);
+    const r = mon && fmt(parseInt(m[3] || fallbackYear), mon, parseInt(m[1]));
+    if (r) return r;
+  }
+  if ((m = text.match(/(\d{4})-(\d{1,2})-(\d{1,2})/))) { const r = fmt(+m[1], +m[2], +m[3]); if (r) return r; }
+  if ((m = text.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})/))) { const r = fmt(+m[3], +m[2], +m[1]); if (r) return r; }
+  return '';
+}
+
+// Tebak Jenis Temuan dari kata kunci di Pelanggaran + Deskripsi
+function ocrGuessJenis(text) {
+  const t = ocrNorm(text);
+  if (!t) return '';
+  const rules = [
+    ['Indikasi Fraud',  /fraud|manipulas|palsu|pemalsuan|curang|kecurangan|penggelapan|fiktif|mark ?up|titip absen/],
+    ['Absen Great day', /great ?day|absen|absensi/],
+    ['Ketepatan Waktu', /telat|terlambat|keterlambatan|tepat waktu|late|jam masuk|melebihi waktu/],
+    ['Grooming',        /grooming|seragam|uniform|rambut|penampilan|name ?tag|id ?card|kuku/],
+    ['Attitude',        /attitude|sikap|sopan|kasar|etika|membentak|marah/],
+    ['Kelalaian SOP',   /sop|staging|guest ?book|input|follow ?up|update|prosedur|lalai|kelalaian|complete|leads?|data/],
+  ];
+  for (const [jenis, re] of rules) if (re.test(t)) return jenis;
+  return 'Kelalaian SOP'; // default (sama dengan default import Excel)
+}
+
+// ---------- Pengisian form (hanya field kosong / yang sebelumnya diisi OCR) ----------
+function ocrTodayStr() { return new Date().toISOString().split('T')[0]; }
+function ocrCanFill(el) {
+  if (!el) return false;
+  if (!el.value || el.dataset.ocrFilled === '1') return true;
+  // tanggal default (hari ini, belum disentuh user) dianggap kosong
+  return el.id === 'f-tgl' && el.value === ocrTodayStr() && el.dataset.userTouched !== '1';
+}
+function ocrMark(el) { el.dataset.ocrFilled = '1'; el.classList.add('ocr-filled'); }
+function ocrSetField(id, val, res, label) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!val) { if (!el.value) res.missing.push(label); return; }
+  if (!ocrCanFill(el)) { res.kept.push(label); return; }
+  el.value = val; ocrMark(el); res.filled.push(label);
+}
+function ocrSetSelectOther(field, val, res, label) {
+  const sel = document.getElementById('f-' + field + '-sel');
+  const other = document.getElementById('f-' + field + '-other');
+  const hidden = document.getElementById('f-' + field);
+  if (!sel || !hidden) return;
+  if (!val) { if (!hidden.value) res.missing.push(label); return; }
+  if (hidden.value && sel.dataset.ocrFilled !== '1') { res.kept.push(label); return; }
+  const opt = [...sel.options].find(o => o.value === String(val));
+  if (opt) {
+    sel.value = opt.value;
+    if (other) { other.value = ''; other.style.display = 'none'; }
+  } else {
+    sel.value = '__other__';
+    if (other) { other.value = val; other.style.display = 'block'; ocrMark(other); }
+  }
+  hidden.value = String(val);
+  ocrMark(sel); res.filled.push(label);
+}
+function ocrClearMarks() {
+  document.querySelectorAll('#page-input .ocr-filled, #page-input [data-ocr-filled], #page-input [data-user-touched]').forEach(el => {
+    el.classList.remove('ocr-filled'); delete el.dataset.ocrFilled; delete el.dataset.userTouched;
+  });
+}
+// Begitu user mengubah field sendiri → dianggap isian manual (tidak akan ditimpa foto berikutnya)
+['input', 'change'].forEach(evt => document.addEventListener(evt, e => {
+  const el = e.target;
+  if (!el || !el.id || !/^f-/.test(el.id)) return;
+  el.classList.remove('ocr-filled'); delete el.dataset.ocrFilled; el.dataset.userTouched = '1';
+  const m = el.id.match(/^f-(\w+)-(other|sel)$/);
+  if (m) ['sel', 'other'].forEach(s => {
+    const twin = document.getElementById('f-' + m[1] + '-' + s);
+    if (twin) { twin.classList.remove('ocr-filled'); delete twin.dataset.ocrFilled; }
+  });
+}, true));
+
+function parseAndFillFromOCR(data) {
+  const rawText = ((data && data.text) || '').replace(/\r/g, '');
+  const layout = ocrParseLayout(data) || {};
+  const textBased = ocrParseText(rawText);
+  const get = k => ocrClean((layout[k] && layout[k].length ? layout[k] : (textBased[k] || [])).join(' '));
+
+  const outlet      = ocrMatchList(get('outlet'), 'outlet-dl', 0.8);
+  const divisi      = ocrMapDivisi(get('divisi'));
+  const staff       = get('staff');
+  const auditor     = get('auditor');
+  const pelanggaran = get('pelanggaran');
+  const deskripsi   = get('deskripsi');
+  const dateText    = get('date') || ((rawText.match(/created\s*at\s*:?\s*([^\n]+)/i) || [])[1] || '');
+
+  const yearHint = ((dateText.match(/20\d\d/) || [])[0]) || String(new Date().getFullYear());
+  const tgl  = ocrFindDate(deskripsi, yearHint) || ocrFindDate(dateText, yearHint);
+  const week = tgl ? Math.ceil(parseInt(tgl.slice(8, 10)) / 7) : '';
+  const ket  = pelanggaran && deskripsi && !ocrNorm(deskripsi).includes(ocrNorm(pelanggaran))
+    ? `${pelanggaran} — ${deskripsi}` : (deskripsi || pelanggaran);
+  const jenis = (pelanggaran || deskripsi) ? ocrGuessJenis(pelanggaran + ' ' + deskripsi) : '';
+
+  // Link Staging diambil dari address bar (domain sering salah baca → di-hardcode ke ftlhorizon.com)
+  let link = '';
+  const domainMatch = rawText.match(/[a-z0-9.-]*horizon\.c[o0]m(\/[^\s]*)?/i);
+  const detailMatch = rawText.match(/auditor\/detail\/\d+/i);
+  if (domainMatch && domainMatch[1]) link = 'https://ftlhorizon.com' + domainMatch[1];
+  else if (detailMatch) link = 'https://ftlhorizon.com/' + detailMatch[0];
+  else if (domainMatch) link = 'https://ftlhorizon.com';
+  else { const u = rawText.match(/https?:\/\/[^\s)]+/i); if (u) link = u[0].replace(/[.,;]+$/, ''); }
+
+  const res = { filled: [], kept: [], missing: [] };
+  ocrSetField('f-tgl', tgl, res, 'Tanggal');
+  ocrSetField('f-auditor', auditor, res, 'Nama Auditor');
+  ocrSetField('f-outlet', outlet, res, 'Outlet');
+  ocrSetField('f-div', divisi, res, 'Divisi');
+  ocrSetField('f-staff', staff, res, 'Nama Staff');
+  ocrSetSelectOther('jenis', jenis, res, 'Jenis Temuan');
+  ocrSetSelectOther('week', week, res, 'Week');
+  ocrSetField('f-link', link, res, 'Link Staging');
+  ocrSetField('f-ket', ket, res, 'Keterangan');
+  res.missing = res.missing.filter(m => m !== 'Link Staging'); // link opsional
+  console.log('[OCR] layout:', layout, '→', { tgl, auditor, outlet, divisi, staff, jenis, week, link, ket });
+  return res;
 }
 
 function resetForm() {
   clearTemuanPhoto();
+  ocrClearMarks();
+  document.getElementById('ai-photo-status').textContent = '';
   document.getElementById('ocr-raw-wrap').style.display = 'none';
   document.getElementById('ocr-raw-text').value = '';
   ['f-tgl','f-auditor','f-outlet','f-div','f-staff','f-link','f-gdrive','f-ket','f-sanggahan'].forEach(id=>{
