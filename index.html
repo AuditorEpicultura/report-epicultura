@@ -839,6 +839,26 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 /* OCR: field yang terisi otomatis dari foto */
 .ocr-filled { background:#ecfdf5 !important; border-color:#10b981 !important; box-shadow:0 0 0 2px rgba(16,185,129,.15); }
 .ocr-drag { background:#dbeafe !important; border-color:var(--primary) !important; }
+/* Kolom tindakan Mode Presentasi: Simpan / Batal */
+.td-wrap { display:flex; flex-direction:column; gap:4px; }
+.td-input { font-size:12px; font-weight:700; color:var(--text); background:transparent; border:1px solid transparent; border-radius:6px; resize:vertical; outline:none; font-family:'Inter',sans-serif; width:100%; min-height:58px; padding:4px 6px; box-sizing:border-box; transition:border-color .15s, background-color .15s; }
+.td-input:hover { border-color:var(--border); }
+.td-input:focus { border-color:#93c5fd; background:#fff; }
+.td-wrap.dirty .td-input { border-color:#f59e0b; background:#fffbeb; }
+.td-wrap.err .td-input { border-color:#ef4444; }
+.td-bar { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:4px; }
+.td-bar:empty { display:none; }
+.td-hint { width:100%; font-size:10px; color:var(--text3); line-height:1.5; }
+.td-hint kbd { font-family:inherit; font-size:9.5px; font-weight:700; border:1px solid var(--border); border-bottom-width:2px; border-radius:4px; padding:0 4px; background:#fff; color:var(--text2); }
+.td-btn { font-size:11px; font-weight:700; padding:4px 10px; border-radius:6px; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-family:inherit; }
+.td-btn:hover:not(:disabled) { border-color:#93c5fd; }
+.td-btn.save { background:#1e40af; border-color:#1e40af; color:#fff; }
+.td-btn.save:hover:not(:disabled) { background:#1d4ed8; }
+.td-btn:disabled { opacity:.6; cursor:wait; }
+.td-ok { width:100%; font-size:10px; font-weight:600; color:#16a34a; }
+.td-errmsg { width:100%; font-size:10px; font-weight:600; color:#dc2626; line-height:1.4; }
+.td-note { font-size:11px; line-height:1.45; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:6px; padding:6px 8px; }
+.td-note-acts { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
 </style>
 </head>
 <body>
@@ -2830,7 +2850,7 @@ function renderPresList() {
     const baseRowCls = d.hidden?'pres-row hidden-row':d.presented?'pres-row presented':'pres-row';
     const rowCls = baseRowCls+(d.priority==='HIGH'?' priority-high-row':d.priority==='LOW'?' priority-low-row':'');
     return `<div class="${rowCls}" style="--rc:${jc.color};margin-bottom:6px">
-      <div style="display:grid;grid-template-columns:200px 1fr 130px 90px;gap:0;align-items:stretch">
+      <div style="display:grid;grid-template-columns:200px 1fr 230px 90px;gap:0;align-items:stretch">
         <div style="padding:10px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:4px;background:var(--surface2)">
           <div style="display:flex;align-items:center;gap:6px">
             <span style="font-size:11px;font-weight:700;color:var(--text3)">${idx+1} · ${d.tgl.slice(5).replace('-','/')}</span>
@@ -2854,8 +2874,7 @@ function renderPresList() {
         </div>
         <div style="padding:10px 10px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:4px">
           <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Tindakan</div>
-          <textarea id="td-${d.id}" rows="3" style="font-size:12px;font-weight:700;color:var(--text);background:transparent;border:none;resize:none;outline:none;font-family:'Inter',sans-serif;width:100%"
-            onblur="saveTindakan(${d.id})">${d.tindakan_direksi||''}</textarea>
+          ${tdCellHtml(d)}
         </div>
         <div style="padding:10px 8px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:flex-start">
           ${statusBadge}
@@ -2876,14 +2895,6 @@ function renderPresList() {
   }).join('');
 }
 function presSearch(q) { presSearchVal=q.toLowerCase(); renderPresList(); }
-function saveTindakan(id) {
-  const val=document.getElementById('td-'+id)?.value||'';
-  const item=allData.find(d=>d.id===id);
-  if (item) { item.tindakan_direksi=val; item.tindakan=val; }
-  saveState();
-  toast('✅ Tindakan disimpan: '+val);
-  renderPresList();
-}
 function togglePresented(id) {
   const item = allData.find(d=>d.id===id);
   if (!item) return;
@@ -3992,13 +4003,25 @@ let firebaseListener = null;
 let saveDebounce = null;
 let isSyncing = false;
 
+// =============================================================================
+// PENYIMPANAN FIREBASE (Realtime Database, REST + streaming)
+//  • Lokasi data per temuan : /audit/<YYYY_MM>__items/<id>   (satu node per temuan)
+//  • Penanda migrasi        : /audit/<YYYY_MM>__meta
+//  • Lokasi lama            : /audit/<YYYY_MM>  {data:[...], updatedAt}
+//    → hanya DIBACA sekali untuk migrasi, TIDAK diubah/dihapus (tetap jadi cadangan)
+//  • Setiap perubahan hanya mengirim kolom yang berubah (PATCH multi-path, atomik, berurutan),
+//    sehingga dua perangkat yang mengubah hal berbeda tidak saling menimpa.
+//  • Perangkat lain menerima perubahan lewat streaming (EventSource) dalam hitungan detik;
+//    jika streaming tidak tersedia, otomatis beralih ke sinkron berkala.
+// =============================================================================
 function getFirebasePath(month) {
   return FIREBASE_URL + '/audit/' + month.replace('-','_') + '.json';
 }
-
 function getMonthsPath() {
   return FIREBASE_URL + '/months.json';
 }
+function itemsPath(month) { return FIREBASE_URL + '/audit/' + month.replace('-','_') + '__items.json'; }
+function metaPath(month)  { return FIREBASE_URL + '/audit/' + month.replace('-','_') + '__meta.json'; }
 
 function getAllMonths() {
   // Returns from local cache (populated by Firebase)
@@ -4020,126 +4043,456 @@ function ensureMonthExists(month) {
     months.sort().reverse();
     saveMonthsList(months);
   }
-  // Always save months list to Firebase
-  fetch(getMonthsPath(), {
-    method: 'PUT',
-    body: JSON.stringify(getAllMonths()),
-    headers: {'Content-Type': 'application/json'}
-  }).catch(e => console.warn('Firebase months save error:', e));
+  // Gabungkan dengan daftar di server dulu, supaya bulan yang dibuat perangkat lain tidak ikut terhapus
+  fetch(getMonthsPath() + '?t=' + Date.now())
+    .then(r => r.ok ? r.json() : null)
+    .then(remote => {
+      const merged = [...new Set([...(Array.isArray(remote) ? remote : []), ...getAllMonths()])].filter(Boolean).sort().reverse();
+      saveMonthsList(merged);
+      if (Array.isArray(remote) && remote.length === merged.length && remote.every((m, i) => m === merged[i])) return;
+      return fetch(getMonthsPath(), { method:'PUT', body: JSON.stringify(merged), headers: {'Content-Type':'application/json'} });
+    })
+    .catch(e => console.warn('Firebase months save error:', e));
 }
 
-// Save allData to Firebase immediately
+// ---------- utilitas data ----------
+function rtCanon(v) {   // JSON dengan urutan kunci tetap → perbandingan tidak terpengaruh urutan kunci
+  if (v === undefined) return 'null';
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(rtCanon).join(',') + ']';
+  return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + rtCanon(v[k])).join(',') + '}';
+}
+function rtClone(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+function rtNorm(d, key) {     // nilai bawaan sama seperti versi sebelumnya
+  const o = { ...d };
+  if (o.id === undefined || o.id === null || o.id === '') o.id = isNaN(Number(key)) ? key : Number(key);
+  if (o.tindakan_direksi == null) o.tindakan_direksi = o.tindakan ?? '';
+  if (o.presented == null) o.presented = false;
+  if (o.hidden == null) o.hidden = false;
+  if (o.priority == null) o.priority = '';
+  if (o.markedInBatch === undefined) o.markedInBatch = null;
+  if (o.manuallyUnmarked == null) o.manuallyUnmarked = false;
+  return o;
+}
+function rtByOrd(a, b) {
+  const oa = typeof a.ord === 'number' ? a.ord : Number.MAX_SAFE_INTEGER, ob = typeof b.ord === 'number' ? b.ord : Number.MAX_SAFE_INTEGER;
+  if (oa !== ob) return oa - ob;
+  return String(a.id).localeCompare(String(b.id), undefined, { numeric:true });
+}
+function rtSetAt(root, segs, value) {   // set/hapus nilai pada jalur bertingkat; mengembalikan root baru
+  if (!segs.length) return value == null ? {} : value;
+  if (!root || typeof root !== 'object') root = {};
+  let o = root;
+  for (let i = 0; i < segs.length - 1; i++) {
+    if (!o[segs[i]] || typeof o[segs[i]] !== 'object') { if (value == null) return root; o[segs[i]] = {}; }
+    o = o[segs[i]];
+  }
+  const last = segs[segs.length - 1];
+  if (value == null) delete o[last]; else o[last] = value;
+  return root;
+}
+const rtSegs = p => String(p || '').split('/').filter(Boolean);
+
+// ---------- status ----------
+let rtRemote = {};        // salinan data server bulan aktif
+let rtSynced = {};        // id → item yang sudah dikirim / dikonfirmasi (dasar pembanding perubahan)
+let rtQueue = [];         // perubahan yang belum dikonfirmasi server, berurutan: {url, upd}
+let rtChain = Promise.resolve();
+let rtES = null, rtPollT = null, rtRetryStreamT = null, rtRetryT = null;
+let rtMonth = '', rtConn = 'connecting', rtLastJson = '', rtRenderPending = false, rtRebuildT = null;
+
+function rtSetConn(state) {
+  rtConn = state;
+  if (rtQueue.length) return;            // status "menyimpan/gagal" lebih penting untuk ditampilkan
+  showSyncIndicator(state);
+}
+
+// ---------- menyimpan (dipanggil di semua tempat yang mengubah data) ----------
 function saveState() {
   if (!currentMonth) {
     console.warn('saveState called but currentMonth is empty');
-    return;
+    return Promise.resolve(false);
   }
-  // Always save to local cache first (instant)
+  // lengkapi nilai bawaan & urutan tampil
+  let mx = 0;
+  allData.forEach(d => {
+    const n = rtNorm(d);
+    Object.keys(n).forEach(k => { if (d[k] === undefined || (d[k] === null && k !== 'markedInBatch')) d[k] = n[k]; });
+    if (typeof d.ord === 'number' && d.ord > mx) mx = d.ord;
+  });
+  allData.forEach(d => { if (typeof d.ord !== 'number') d.ord = ++mx; });
   try { localStorage.setItem('ftlgym_cache_' + currentMonth, JSON.stringify(allData)); } catch(e) {}
 
-  // Clear any pending debounce
-  if (saveDebounce) clearTimeout(saveDebounce);
+  // hitung perubahan per kolom dibanding data terakhir yang tersinkron
+  const upd = {}, seen = {};
+  allData.forEach(d => {
+    const id = String(d.id); seen[id] = 1;
+    const cur = rtClone(d), prev = rtSynced[id];
+    if (!prev) { upd[id] = cur; rtSynced[id] = cur; return; }
+    new Set([...Object.keys(prev), ...Object.keys(cur)]).forEach(k => {
+      if (rtCanon(prev[k]) !== rtCanon(cur[k])) upd[id + '/' + k] = cur[k] === undefined ? null : cur[k];
+    });
+    rtSynced[id] = cur;
+  });
+  Object.keys(rtSynced).forEach(id => { if (!seen[id]) { upd[id] = null; delete rtSynced[id]; } });
+  rtLastJson = rtCanon(allData.slice().sort(rtByOrd));
+  if (!Object.keys(upd).length) return Promise.resolve(true);
+  return rtEnqueue(itemsPath(currentMonth), upd);
+}
 
-  // Save to Firebase immediately (no debounce for reliability)
-  const payload = { data: allData, updatedAt: Date.now() };
-  window._lastSavedAt = payload.updatedAt;
-  showSyncIndicator('loading');
-
-  fetch(getFirebasePath(currentMonth), {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-    headers: {'Content-Type': 'application/json'}
-  }).then(r => {
-    if (r.ok) {
-      showSyncIndicator('saved');
-      console.log('Firebase saved OK, month:', currentMonth, 'items:', allData.length);
-    } else {
-      showSyncIndicator('error');
-      console.warn('Firebase save failed:', r.status);
-    }
-  }).catch(e => {
+function rtEnqueue(url, upd) {
+  const job = { url, upd };
+  rtQueue.push(job);
+  showSyncIndicator('saving');
+  const p = rtChain.then(() => rtQueue[0] === job ? rtSendRaw(job) : false);   // dikirim berurutan; tidak menyalip perubahan sebelumnya yang gagal
+  rtChain = p.catch(() => {});
+  return p;
+}
+async function rtSendRaw(job) {
+  try {
+    const r = await fetch(job.url, { method:'PATCH', body: JSON.stringify(job.upd), headers: {'Content-Type':'application/json'} });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const i = rtQueue.indexOf(job); if (i >= 0) rtQueue.splice(i, 1);
+    if (!rtQueue.length) { showSyncIndicator('saved'); rtAfterAllSaved(); }
+    return true;
+  } catch(e) {
     console.warn('Firebase save error:', e);
     showSyncIndicator('error');
-  });
+    rtScheduleRetry();
+    return false;
+  }
+}
+function rtScheduleRetry() { if (!rtRetryT) rtRetryT = setTimeout(() => { rtRetryT = null; rtFlush(); }, 4000); }
+function rtFlush() {
+  rtChain = rtChain.then(async () => {
+    while (rtQueue.length) { if (!(await rtSendRaw(rtQueue[0]))) break; }
+  }).catch(() => {});
+  return rtChain;
+}
+window.addEventListener('online', () => { if (rtQueue.length) rtFlush(); });
+
+// ---------- memuat data bulan (termasuk migrasi sekali jalan dari lokasi lama) ----------
+async function rtMigrate(month) {
+  // Jika lokasi baru sudah berisi data (perangkat lain sudah/sedang migrasi), jangan ditimpa
+  const ex = await fetch(itemsPath(month) + '?shallow=true&t=' + Date.now());
+  if (!ex.ok) throw new Error('HTTP ' + ex.status);
+  const exist = await ex.json();
+  let count = 0;
+  if (!exist) {
+    const lr = await fetch(getFirebasePath(month) + '?t=' + Date.now());
+    if (!lr.ok) throw new Error('HTTP ' + lr.status);
+    const legacy = await lr.json();
+    const raw = legacy && legacy.data ? (Array.isArray(legacy.data) ? legacy.data : Object.values(legacy.data)) : [];
+    const items = {}, used = new Set();
+    raw.forEach((d, i) => {
+      if (!d || typeof d !== 'object') return;
+      let id = typeof d.id === 'number' && isFinite(d.id) ? d.id : (d.id != null && d.id !== '' && !isNaN(Number(d.id)) ? Number(d.id) : i);
+      while (used.has(String(id))) id = Date.now() + Math.floor(Math.random() * 100000);
+      used.add(String(id));
+      const it = rtNorm({ ...d, id }); it.ord = i;
+      items[String(id)] = rtClone(it);
+    });
+    count = Object.keys(items).length;
+    if (count) {
+      const w = await fetch(itemsPath(month), { method:'PATCH', body: JSON.stringify(items), headers: {'Content-Type':'application/json'} });
+      if (!w.ok) throw new Error('HTTP ' + w.status);
+    }
+  }
+  const m = await fetch(metaPath(month), { method:'PUT', body: JSON.stringify({ migrated:true, at:Date.now(), from:'audit/' + month.replace('-','_'), count }), headers: {'Content-Type':'application/json'} });
+  if (!m.ok) throw new Error('HTTP ' + m.status);
 }
 
-// Load data from Firebase for a month
+function rtRebuild() {   // data tampil = data server + perubahan lokal yang belum terkonfirmasi
+  let base = rtClone(rtRemote) || {};
+  const url = itemsPath(currentMonth);
+  rtQueue.forEach(j => { if (j.url === url) Object.keys(j.upd).forEach(k => { base = rtSetAt(base, rtSegs(k), rtClone(j.upd[k])); }); });
+  const items = Object.keys(base).filter(k => base[k] && typeof base[k] === 'object').map(k => rtNorm(base[k], k)).sort(rtByOrd);
+  rtSynced = {}; items.forEach(d => { rtSynced[String(d.id)] = rtClone(d); });
+  const json = rtCanon(items);
+  if (json === rtLastJson) return false;
+  rtLastJson = json; allData = items;
+  try { localStorage.setItem('ftlgym_cache_' + currentMonth, JSON.stringify(allData)); } catch(e) {}
+  return true;
+}
+
 async function loadMonthData(month) {
+  if (rtMonth && rtMonth !== month) rtStop();
   try {
-    const r = await fetch(getFirebasePath(month));
-    if (r.ok) {
-      const json = await r.json();
-      if (json && json.data && Array.isArray(json.data)) {
-        // Cache locally
-        try { localStorage.setItem('ftlgym_cache_' + month, JSON.stringify(json.data)); } catch(e) {}
-        return json.data.map((d, i) => ({
-          ...d,
-          id: d.id ?? i,
-          tindakan_direksi: d.tindakan_direksi ?? d.tindakan ?? '',
-          presented: d.presented ?? false,
-          hidden: d.hidden ?? false,
-          priority: d.priority ?? '',
-          markedInBatch: d.markedInBatch ?? null,
-          manuallyUnmarked: d.manuallyUnmarked ?? false,
-        }));
-      }
+    const mr = await fetch(metaPath(month) + '?t=' + Date.now());
+    if (!mr.ok) throw new Error('HTTP ' + mr.status);
+    const meta = await mr.json();
+    if (!meta || !meta.migrated) await rtMigrate(month);
+    else {
+      // peringatan bila masih ada perangkat yang memakai versi lama dan menyimpan ke lokasi lama
+      fetch(FIREBASE_URL + '/audit/' + month.replace('-','_') + '/updatedAt.json?t=' + Date.now())
+        .then(r => r.ok ? r.json() : null)
+        .then(u => { if (u && meta.at && u > meta.at + 60000) toast('⚠️ Ada perangkat yang masih memakai dashboard versi lama. Minta semua pengguna me-refresh halaman.', 'error'); })
+        .catch(() => {});
     }
+    const r = await fetch(itemsPath(month) + '?t=' + Date.now());
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    rtRemote = (await r.json()) || {};
+    rtLastJson = '';
+    rtRebuild();
+    return allData;
   } catch(e) {
     console.warn('Firebase load error, using cache:', e);
+    showSyncIndicator('error');
   }
-  // Fallback to local cache
-  try {
-    const cached = localStorage.getItem('ftlgym_cache_' + month);
-    if (cached) return JSON.parse(cached);
-  } catch(e) {}
-  return [];
+  // Cadangan bila Firebase tidak bisa dibaca: cache lokal, lalu data lokasi lama (hanya untuk ditampilkan)
+  let arr = null;
+  try { const cached = localStorage.getItem('ftlgym_cache_' + month); if (cached) arr = JSON.parse(cached); } catch(e) {}
+  if (!arr) {
+    try { const lr = await fetch(getFirebasePath(month) + '?t=' + Date.now()); if (lr.ok) { const j = await lr.json(); if (j && j.data) arr = Array.isArray(j.data) ? j.data : Object.values(j.data); } } catch(e) {}
+  }
+  arr = (arr || []).filter(d => d && typeof d === 'object').map((d, i) => rtNorm(d, i));
+  rtSynced = {}; arr.forEach(d => { rtSynced[String(d.id)] = rtClone(d); });   // supaya hanya kolom yang benar-benar diubah yang dikirim nanti
+  rtLastJson = rtCanon(arr.slice().sort(rtByOrd));
+  return arr;
 }
 
-// Start real-time listener using SSE (Firebase streaming)
-function startRealtimeSync(month) {
-  if (firebaseListener) firebaseListener.close();
-  const url = getFirebasePath(month).replace('.json', '') + '.json?format=export';
-  // Poll every 5 seconds for real-time feel (Firebase REST polling)
-  if (window._syncInterval) clearInterval(window._syncInterval);
-  window._syncInterval = setInterval(async () => {
-    if (isSyncing) return;
-    isSyncing = true;
-    try {
-      const r = await fetch(getFirebasePath(month) + '?t=' + Date.now());
-      if (r.ok) {
-        const json = await r.json();
-        if (json && json.data && Array.isArray(json.data)) {
-          const remoteUpdated = json.updatedAt || 0;
-          const localUpdated = window._lastSavedAt || 0;
-          // Only update if remote is newer (someone else saved)
-          if (remoteUpdated > localUpdated + 2000) {
-            allData = json.data.map((d, i) => ({
-              ...d, id: d.id ?? i,
-              tindakan_direksi: d.tindakan_direksi ?? d.tindakan ?? '',
-              presented: d.presented ?? false, hidden: d.hidden ?? false,
-              priority: d.priority ?? '', markedInBatch: d.markedInBatch ?? null,
-              manuallyUnmarked: d.manuallyUnmarked ?? false,
-            }));
-            window._lastSavedAt = remoteUpdated;
-            // Re-render current page
-            const active = document.querySelector('.page.active');
-            if (active) {
-              const pageId = active.id.replace('page-','');
-              if (pageId === 'dashboard') renderDashboard();
-              else if (pageId === 'data') renderTable();
-              else if (pageId === 'presentasi') renderPresentasi();
-              else if (pageId === 'outlet') renderOutlet();
-              else if (pageId === 'divisi') renderDivisi();
-              else if (pageId === 'staff') renderStaffTracker();
-            }
-            showSyncIndicator('synced');
-          }
-        }
-      }
-    } catch(e) { console.warn('Sync error:', e); }
-    isSyncing = false;
-  }, 5000); // Check every 5 seconds
+// ---------- menerima perubahan realtime ----------
+function rtStop() {
+  if (rtES) { try { rtES.close(); } catch(e) {} rtES = null; }
+  if (rtPollT) { clearInterval(rtPollT); rtPollT = null; }
+  if (rtRetryStreamT) { clearTimeout(rtRetryStreamT); rtRetryStreamT = null; }
+  if (window._syncInterval) { clearInterval(window._syncInterval); window._syncInterval = null; }
 }
+function rtScheduleRebuild() {
+  clearTimeout(rtRebuildT);
+  rtRebuildT = setTimeout(() => { if (rtRebuild()) rtRenderActive(); }, 60);
+}
+function rtApplyEvent(type, path, data) {
+  const base = rtSegs(path);
+  if (type === 'put') rtRemote = rtSetAt(rtRemote, base, rtClone(data));
+  else if (type === 'patch' && data && typeof data === 'object') Object.keys(data).forEach(k => { rtRemote = rtSetAt(rtRemote, base.concat(rtSegs(k)), rtClone(data[k])); });
+  rtScheduleRebuild();
+}
+function startRealtimeSync(month) {
+  rtStop();
+  rtMonth = month;
+  if (typeof EventSource === 'undefined') { rtStartPolling(month); return; }
+  let es;
+  try { es = new EventSource(itemsPath(month)); } catch(e) { rtStartPolling(month); return; }
+  rtES = es;
+  let errs = 0;
+  const onData = type => ev => {
+    if (rtES !== es || currentMonth !== month) return;
+    errs = 0;
+    let msg; try { msg = JSON.parse(ev.data); } catch(e) { return; }
+    if (!msg) return;
+    rtApplyEvent(type, msg.path || '/', msg.data);
+    rtSetConn('live');
+  };
+  es.addEventListener('put', onData('put'));
+  es.addEventListener('patch', onData('patch'));
+  const toPolling = () => { if (rtES !== es) return; rtStop(); rtStartPolling(month); };
+  es.addEventListener('cancel', toPolling);
+  es.addEventListener('auth_revoked', toPolling);
+  es.onopen = () => { if (rtES === es) rtSetConn('live'); };
+  es.onerror = () => {
+    if (rtES !== es) return;
+    errs++; rtSetConn('reconnect');
+    if (es.readyState === 2 || errs >= 4) toPolling();   // browser menyerah → beralih ke sinkron berkala
+  };
+}
+function rtStartPolling(month) {
+  rtSetConn('poll');
+  const tick = async () => {
+    if (currentMonth !== month) return;
+    try {
+      const r = await fetch(itemsPath(month) + '?t=' + Date.now());
+      if (r.ok) { rtRemote = (await r.json()) || {}; rtScheduleRebuild(); if (!rtQueue.length) showSyncIndicator('poll'); }
+    } catch(e) { showSyncIndicator('offline'); }
+  };
+  tick();
+  rtPollT = setInterval(tick, 4000);
+  rtRetryStreamT = setTimeout(() => { if (currentMonth === month) startRealtimeSync(month); }, 60000);   // coba streaming lagi
+}
+function rtRenderActive() {
+  const a = document.activeElement;
+  let refocus = null;
+  if (a && a.classList && a.classList.contains('td-input')) {
+    const id = tdIdOf(a);
+    if (id != null && tdState(id) === 'dirty') {   // sedang mengubah tindakan → kotak ini tidak diganggu
+      rtRenderPending = true;
+      tdCheckConflicts();
+      tdSyncCleanBoxes();                           // kotak lain yang tidak sedang diubah tetap diperbarui
+      return;
+    }
+    refocus = { id: a.id, s: a.selectionStart, e: a.selectionEnd };   // tidak sedang mengubah → gambar ulang, fokus dikembalikan
+  }
+  rtRenderPending = false;
+  rtRenderPage();
+  if (refocus) {
+    const n = document.getElementById(refocus.id);
+    if (n) { n.focus(); try { n.setSelectionRange(refocus.s, refocus.e); } catch(e) {} }
+  }
+}
+function rtRenderPage() {
+  const active = document.querySelector('.page.active');
+  if (!active) return;
+  const pageId = active.id.replace('page-','');
+  if (pageId === 'dashboard') renderDashboard();
+  else if (pageId === 'data') renderTable();
+  else if (pageId === 'presentasi') renderPresentasi();
+  else if (pageId === 'outlet') renderOutlet();
+  else if (pageId === 'divisi') renderDivisi();
+  else if (pageId === 'staff') renderStaffTracker();
+}
+
+// =============================================================================
+// KOLOM TINDAKAN DI MODE PRESENTASI: Simpan / Batal (Enter / Esc)
+//  • Ketikan disimpan sebagai draft (tidak hilang walau daftar diperbarui) sampai disimpan/dibatalkan
+//  • Enter = simpan · Shift+Enter = baris baru · Esc = batal
+//  • Bila komentar yang sama diubah di perangkat lain saat Anda mengetik → pilih versi yang dipakai
+// =============================================================================
+const presDrafts = {};          // id → { text, base }  (base = nilai tersimpan saat mulai mengetik)
+const tdSaving = new Set(), tdError = new Set(), tdJustSaved = {};
+const htmlEsc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+function tdItem(id) { return allData.find(x => String(x.id) === String(id)); }
+function tdSavedVal(id) { const it = tdItem(id); return it ? (it.tindakan_direksi || '') : ''; }
+function tdState(id) {
+  if (tdSaving.has(id)) return 'saving';
+  if (tdError.has(id)) return 'error';
+  const dr = presDrafts[id];
+  if (dr && dr.text !== tdSavedVal(id)) return 'dirty';
+  if (tdJustSaved[id] && Date.now() - tdJustSaved[id] < 4000) return 'saved';
+  return 'clean';
+}
+function tdBarHtml(id) {
+  const st = tdState(id);
+  if (st === 'dirty') return `<span class="td-hint"><kbd>Enter</kbd> simpan · <kbd>Shift</kbd>+<kbd>Enter</kbd> baris baru · <kbd>Esc</kbd> batal</span>
+    <button type="button" class="td-btn" data-td="cancel">Batal</button><button type="button" class="td-btn save" data-td="save">Simpan</button>`;
+  if (st === 'saving') return `<button type="button" class="td-btn" disabled>Batal</button><button type="button" class="td-btn save" disabled>Menyimpan…</button>`;
+  if (st === 'error') return `<span class="td-errmsg">Belum tersimpan ke server. Dicoba ulang otomatis.</span><button type="button" class="td-btn save" data-td="retry">Coba lagi</button>`;
+  if (st === 'saved') return `<span class="td-ok">✓ Tersimpan · terkirim ke semua perangkat</span>`;
+  return '';
+}
+function tdNoteHtml(id) {
+  const dr = presDrafts[id];
+  if (!dr) return '';
+  const saved = tdSavedVal(id);
+  if (dr.base === saved || dr.text === saved) return '';
+  return `<div class="td-note">Diubah di perangkat lain menjadi: <b>“${htmlEsc(saved) || '(kosong)'}”</b>. Ketikan Anda belum disimpan.
+    <div class="td-note-acts"><button type="button" class="td-btn" data-td="keep">Tetap pakai ketikan saya</button><button type="button" class="td-btn" data-td="theirs">Pakai versi itu</button></div></div>`;
+}
+function tdCellHtml(d) {
+  const dr = presDrafts[d.id], st = tdState(d.id);
+  const val = dr ? dr.text : (d.tindakan_direksi || '');
+  return `<div class="td-wrap${st === 'dirty' ? ' dirty' : ''}${st === 'error' ? ' err' : ''}" id="tdw-${d.id}" data-id="${htmlEsc(d.id)}">
+      <textarea id="td-${d.id}" class="td-input" rows="3" placeholder="Tulis tindakan / arahan direksi…" aria-label="Tindakan direksi untuk ${htmlEsc(d.staff)}">${htmlEsc(val)}</textarea>
+      <div class="td-bar" id="tdb-${d.id}">${tdBarHtml(d.id)}</div>
+      <div id="tdn-${d.id}">${tdNoteHtml(d.id)}</div>
+    </div>`;
+}
+function tdRefresh(id) {      // perbarui satu kotak tanpa menggambar ulang seluruh daftar (fokus & kursor aman)
+  const w = document.getElementById('tdw-' + id); if (!w) return;
+  const st = tdState(id);
+  w.classList.toggle('dirty', st === 'dirty'); w.classList.toggle('err', st === 'error');
+  const b = document.getElementById('tdb-' + id); if (b) b.innerHTML = tdBarHtml(id);
+  const n = document.getElementById('tdn-' + id); if (n) n.innerHTML = tdNoteHtml(id);
+}
+function tdCheckConflicts() { Object.keys(presDrafts).forEach(id => tdRefresh(tdIdFrom(id))); }
+function tdSyncCleanBoxes() {   // samakan isi kotak yang tidak sedang diubah dengan data terbaru
+  document.querySelectorAll('.td-input').forEach(ta => {
+    if (ta === document.activeElement) return;
+    const id = tdIdOf(ta); if (id == null || presDrafts[id]) return;
+    const v = tdSavedVal(id);
+    if (ta.value !== v) ta.value = v;
+    tdRefresh(id);
+  });
+}
+function tdIdFrom(raw) { const it = allData.find(x => String(x.id) === String(raw)); return it ? it.id : raw; }
+function tdIdOf(el) { const w = el.closest && el.closest('.td-wrap'); return w ? tdIdFrom(w.dataset.id) : null; }
+
+async function saveTindakan(id) {
+  const item = tdItem(id);
+  if (!item || tdSaving.has(id)) return;
+  const ta = document.getElementById('td-' + id);
+  const val = (ta ? ta.value : (presDrafts[id] ? presDrafts[id].text : '')).trim();
+  if (val === (item.tindakan_direksi || '') && !presDrafts[id]) return;
+  tdSaving.add(id); tdError.delete(id); tdRefresh(id);
+  item.tindakan_direksi = val; item.tindakan = val;
+  const ok = await saveState();
+  tdSaving.delete(id);
+  delete presDrafts[id];
+  if (ok) {
+    tdJustSaved[id] = Date.now();
+    toast('✅ Tindakan disimpan: ' + (val || '(kosong)'));
+    setTimeout(() => tdRefresh(id), 4100);
+  } else {
+    tdError.add(id);
+    toast('⚠️ Tindakan belum tersimpan ke server. Dicoba ulang otomatis.', 'error');
+  }
+  const ta2 = document.getElementById('td-' + id);
+  if (ta2 && ta2.value !== val && document.activeElement !== ta2) ta2.value = val;
+  tdRefresh(id);
+  if (rtRenderPending) rtRenderActive();
+}
+function tdCancel(id, blur) {
+  delete presDrafts[id];
+  const ta = document.getElementById('td-' + id);
+  if (ta) { ta.value = tdSavedVal(id); if (blur) ta.blur(); }
+  tdRefresh(id);
+}
+function rtAfterAllSaved() {      // antrean tersimpan semua → hapus tanda gagal
+  if (!tdError.size) return;
+  const ids = [...tdError]; tdError.clear();
+  ids.forEach(id => { tdJustSaved[id] = Date.now(); tdRefresh(id); setTimeout(() => tdRefresh(id), 4100); });
+  toast('✅ Perubahan yang tertunda sudah tersimpan');
+}
+
+// ---- interaksi (event delegation: tetap berfungsi walau daftar digambar ulang) ----
+document.addEventListener('input', e => {
+  const ta = e.target;
+  if (!ta.classList || !ta.classList.contains('td-input')) return;
+  const id = tdIdOf(ta); if (id == null) return;
+  const saved = tdSavedVal(id);
+  if (!presDrafts[id]) presDrafts[id] = { base: saved, text: ta.value };
+  presDrafts[id].text = ta.value;
+  if (ta.value === saved && presDrafts[id].base === saved) delete presDrafts[id];
+  tdRefresh(id);
+});
+document.addEventListener('keydown', e => {
+  const ta = e.target;
+  if (!ta.classList || !ta.classList.contains('td-input')) return;
+  const id = tdIdOf(ta); if (id == null) return;
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    if (tdState(id) === 'dirty') saveTindakan(id);
+  } else if (e.key === 'Escape') {
+    e.preventDefault(); e.stopPropagation();
+    tdCancel(id, true);
+  }
+});
+// tombol di dalam kotak tidak mengambil fokus dari textarea (klik tidak hilang saat daftar diperbarui)
+document.addEventListener('mousedown', e => { if (e.target.closest && e.target.closest('.td-wrap [data-td]')) e.preventDefault(); });
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('.td-wrap [data-td]'); if (!b || b.disabled) return;
+  const id = tdIdOf(b); if (id == null) return;
+  const act = b.dataset.td;
+  if (act === 'save') saveTindakan(id);
+  else if (act === 'cancel') tdCancel(id, true);
+  else if (act === 'retry') rtFlush();
+  else if (act === 'keep') { if (presDrafts[id]) presDrafts[id].base = tdSavedVal(id); tdRefresh(id); }
+  else if (act === 'theirs') tdCancel(id, false);
+});
+// pembaruan dari perangkat lain yang ditunda selama mengetik → terapkan setelah selesai
+let tdMouseDown = false;
+document.addEventListener('mousedown', () => { tdMouseDown = true; }, true);
+document.addEventListener('mouseup', () => { tdMouseDown = false; }, true);
+document.addEventListener('focusout', e => {
+  if (!rtRenderPending || !e.target.classList || !e.target.classList.contains('td-input')) return;
+  const go = () => { const a = document.activeElement; if (a && a.classList && a.classList.contains('td-input')) return; if (rtRenderPending) rtRenderActive(); };
+  if (tdMouseDown) document.addEventListener('mouseup', () => setTimeout(go, 0), { once:true });
+  else setTimeout(go, 150);
+});
+// peringatan sebelum menutup/refresh bila ada ketikan atau perubahan yang belum tersimpan
+window.addEventListener('beforeunload', e => {
+  const unsaved = Object.keys(presDrafts).some(id => presDrafts[id].text !== tdSavedVal(tdIdFrom(id)));
+  if (unsaved || rtQueue.length) { e.preventDefault(); e.returnValue = ''; return ''; }
+});
 
 // Switch to different month
 async function switchMonth(month) {
@@ -4168,17 +4521,23 @@ function showSyncIndicator(state) {
   const lbl = document.getElementById('sync-label');
   if (!dot || !lbl) return;
   const states = {
-    loading: { color:'#f59e0b', text:'Memuat...' },
-    saved:   { color:'#10b981', text:'Tersimpan ✓' },
-    synced:  { color:'#10b981', text:'Disync ✓' },
-    error:   { color:'#ef4444', text:'Gagal simpan' },
-    ok:      { color:'#10b981', text:'Online ✓' },
+    loading:   { color:'#f59e0b', text:'Memuat...' },
+    saving:    { color:'#f59e0b', text:'Menyimpan…' },
+    saved:     { color:'#10b981', text:'Tersimpan ✓' },
+    synced:    { color:'#10b981', text:'Disync ✓' },
+    error:     { color:'#ef4444', text:'Gagal simpan · dicoba ulang' },
+    ok:        { color:'#10b981', text:'Online ✓' },
+    live:      { color:'#10b981', text:'Realtime ✓' },
+    reconnect: { color:'#f59e0b', text:'Menyambung ulang…' },
+    poll:      { color:'#f59e0b', text:'Sinkron berkala' },
+    offline:   { color:'#ef4444', text:'Offline' },
+    connecting:{ color:'#f59e0b', text:'Menghubungkan...' },
   };
   const s = states[state] || states.ok;
   dot.style.background = s.color;
   lbl.textContent = s.text;
   if (state === 'saved' || state === 'synced') {
-    setTimeout(() => { lbl.textContent = 'Real-time'; dot.style.background = '#10b981'; }, 2000);
+    setTimeout(() => { if (!rtQueue.length) showSyncIndicator(rtConn === 'connecting' ? 'live' : rtConn); }, 2000);
   }
 }
 
@@ -4257,8 +4616,16 @@ function updateStorageInfo() {
 
 async function confirmResetMonth() {
   if (!confirm(`Hapus semua data ${getCurrentMonthLabel(currentMonth)}? Data akan hilang permanen.`)) return;
-  allData = [];
-  await fetch(getFirebasePath(currentMonth), { method: 'DELETE' });
+  try {
+    const r = await fetch(itemsPath(currentMonth), { method: 'DELETE' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    await fetch(getFirebasePath(currentMonth), { method: 'DELETE' });
+    await fetch(metaPath(currentMonth), { method: 'PUT', body: JSON.stringify({ migrated:true, at:Date.now(), reset:true }), headers: {'Content-Type':'application/json'} });
+  } catch(e) { toast('Gagal menghapus data: ' + e.message, 'error'); return; }
+  const url = itemsPath(currentMonth);
+  rtQueue = rtQueue.filter(j => j.url !== url);
+  allData = []; rtRemote = {}; rtSynced = {}; rtLastJson = '';
+  Object.keys(presDrafts).forEach(k => delete presDrafts[k]);
   try { localStorage.removeItem('ftlgym_cache_' + currentMonth); } catch(e) {}
   toast('🗑 Data ' + getCurrentMonthLabel(currentMonth) + ' dihapus');
   document.getElementById('storage-modal').classList.remove('open');
