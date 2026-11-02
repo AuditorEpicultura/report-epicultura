@@ -848,8 +848,6 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 .td-wrap.err .td-input { border-color:#ef4444; }
 .td-bar { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:4px; }
 .td-bar:empty { display:none; }
-.td-hint { width:100%; font-size:10px; color:var(--text3); line-height:1.5; }
-.td-hint kbd { font-family:inherit; font-size:9.5px; font-weight:700; border:1px solid var(--border); border-bottom-width:2px; border-radius:4px; padding:0 4px; background:#fff; color:var(--text2); }
 .td-btn { font-size:11px; font-weight:700; padding:4px 10px; border-radius:6px; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-family:inherit; }
 .td-btn:hover:not(:disabled) { border-color:#93c5fd; }
 .td-btn.save { background:#1e40af; border-color:#1e40af; color:#fff; }
@@ -859,6 +857,28 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 .td-errmsg { width:100%; font-size:10px; font-weight:600; color:#dc2626; line-height:1.4; }
 .td-note { font-size:11px; line-height:1.45; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:6px; padding:6px 8px; }
 .td-note-acts { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
+/* Mode Presentasi: baris yang ditunjuk kursor (atau sedang diketik) terangkat halus & tersorot */
+.pres-row {
+  position:relative;
+  transition:transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease, background-color .25s ease, border-color .25s ease, opacity .25s ease, filter .25s ease;
+}
+.pres-row:hover, .pres-row:focus-within {
+  transform:translateY(-3px);
+  background:#f5f9ff;
+  border-top-color:#bfdbfe; border-right-color:#bfdbfe; border-bottom-color:#bfdbfe;   /* garis warna kiri (jenis temuan) tetap */
+  box-shadow:0 12px 28px -10px rgba(30,64,175,.28), 0 2px 6px rgba(30,64,175,.08);
+  opacity:1;
+  z-index:1;
+}
+.pres-row:hover > div > div:first-child, .pres-row:focus-within > div > div:first-child { background:#eaf2ff !important; transition:background-color .25s ease; }
+.pres-row.hidden-row:hover, .pres-row.hidden-row:focus-within { opacity:.8; }
+@media (hover:hover) {
+  .pres-list:hover .pres-row:not(:hover):not(:focus-within):not(.hidden-row) { opacity:.6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pres-row { transition:background-color .2s, opacity .2s; }
+  .pres-row:hover, .pres-row:focus-within { transform:none; }
+}
 </style>
 </head>
 <body>
@@ -4362,8 +4382,7 @@ function tdState(id) {
 }
 function tdBarHtml(id) {
   const st = tdState(id);
-  if (st === 'dirty') return `<span class="td-hint"><kbd>Enter</kbd> simpan · <kbd>Shift</kbd>+<kbd>Enter</kbd> baris baru · <kbd>Esc</kbd> batal</span>
-    <button type="button" class="td-btn" data-td="cancel">Batal</button><button type="button" class="td-btn save" data-td="save">Simpan</button>`;
+  if (st === 'dirty') return `<button type="button" class="td-btn" data-td="cancel">Batal</button><button type="button" class="td-btn save" data-td="save">Simpan</button>`;
   if (st === 'saving') return `<button type="button" class="td-btn" disabled>Batal</button><button type="button" class="td-btn save" disabled>Menyimpan…</button>`;
   if (st === 'error') return `<span class="td-errmsg">Belum tersimpan ke server. Dicoba ulang otomatis.</span><button type="button" class="td-btn save" data-td="retry">Coba lagi</button>`;
   if (st === 'saved') return `<span class="td-ok">✓ Tersimpan · terkirim ke semua perangkat</span>`;
