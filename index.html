@@ -998,6 +998,27 @@ body.is-loading .page.active { display:none !important; }
 .sk-line { height:12px; margin-bottom:14px; }
 @media (max-width: 768px) { .app-skeleton { padding:14px; } .sk-grid { grid-template-columns:1fr; } }
 .sr-only { position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+/* Tabel Data Temuan: jarak sel lebih rapat agar semua kolom (termasuk tombol aksi) muat */
+.data-table th, .data-table td { padding-left:8px; padding-right:8px; }
+.data-table td .btn-sm { padding:5px 8px; }
+.data-table td:last-child { white-space:nowrap; }
+/* Panel export per periode */
+.exp-box { background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; margin-bottom:14px; }
+.exp-title { font-size:13px; font-weight:700; color:#166534; margin-bottom:10px; }
+.exp-seg { display:inline-flex; border:1.5px solid #86efac; border-radius:8px; overflow:hidden; margin-bottom:10px; background:#fff; }
+.exp-seg button { border:none; background:transparent; padding:7px 14px; font:inherit; font-size:13px; font-weight:600; color:#166534; cursor:pointer; transition:background-color .2s, color .2s; }
+.exp-seg button + button { border-left:1px solid #bbf7d0; }
+.exp-seg button:hover { background:#dcfce7; }
+.exp-seg button.on { background:#16a34a; color:#fff; }
+.exp-fields { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.exp-field { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#166534; min-width:150px; flex:1; }
+.exp-field[hidden] { display:none; }
+.exp-field .form-select { font-size:13px; padding:7px 10px; background:#fff; }
+.exp-check { display:flex; align-items:center; gap:8px; font-size:13px; color:#166534; margin-bottom:10px; cursor:pointer; }
+.exp-check input { width:16px; height:16px; accent-color:#16a34a; }
+.exp-summary { font-size:13px; color:#14532d; background:#fff; border:1px dashed #86efac; border-radius:6px; padding:8px 10px; margin-bottom:10px; min-height:20px; }
+.exp-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.exp-actions .btn:disabled { opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
 </style>
 </head>
 <body>
@@ -1092,7 +1113,7 @@ body.is-loading .page.active { display:none !important; }
   </div>
   <div class="sidebar-period">
     <div class="period-label">Periode</div>
-    <div class="period-val">Mei 2026</div>
+    <div class="period-val">Memuat…</div>
   </div>
   <nav class="sidebar-nav">
     <div class="nav-section">Menu</div>
@@ -1928,13 +1949,23 @@ body.is-loading .page.active { display:none !important; }
     </div>
 
     <!-- EXPORT -->
-    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;margin-bottom:14px">
-      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:8px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Export Data</div>
-      <div style="font-size:12px;color:#166534;margin-bottom:10px">Download data bulan ini sebagai file Excel — bisa dibuka di Excel / Google Sheets.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-success" onclick="exportExcel('month')" style="font-size:12px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Export Bulan Ini</button>
-        <button class="btn btn-ghost" onclick="exportExcel('all')" style="font-size:12px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Export Semua Data</button>
-        <button class="btn btn-ghost" onclick="exportCSV()" style="font-size:12px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Export CSV</button>
+    <div class="exp-box">
+      <div class="exp-title"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Export Temuan</div>
+      <div class="exp-seg" role="radiogroup" aria-label="Periode export">
+        <button type="button" role="radio" data-p="week" aria-checked="false">Mingguan</button>
+        <button type="button" role="radio" data-p="month" aria-checked="true" class="on">Bulanan</button>
+        <button type="button" role="radio" data-p="year" aria-checked="false">Tahunan</button>
+      </div>
+      <div class="exp-fields">
+        <label class="exp-field" id="exp-month-wrap"><span>Bulan</span><select class="form-select" id="exp-month"></select></label>
+        <label class="exp-field" id="exp-week-wrap" hidden><span>Week</span><select class="form-select" id="exp-week"></select></label>
+        <label class="exp-field" id="exp-year-wrap" hidden><span>Tahun</span><select class="form-select" id="exp-year"></select></label>
+      </div>
+      <label class="exp-check"><input type="checkbox" id="exp-hidden"> Sertakan temuan yang dibatalkan</label>
+      <div class="exp-summary" id="exp-summary" aria-live="polite"></div>
+      <div class="exp-actions">
+        <button type="button" class="btn btn-success" id="exp-xlsx"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Download Excel</button>
+        <button type="button" class="btn btn-ghost" id="exp-csv"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-download"></use></svg> Download CSV</button>
       </div>
     </div>
 
@@ -1962,7 +1993,7 @@ body.is-loading .page.active { display:none !important; }
 
     <!-- RESET -->
     <div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px">
-      <span style="font-size:12px;color:var(--text3)">Data tersimpan otomatis di browser ini</span>
+      <span style="font-size:12px;color:var(--text3)">Data tersimpan otomatis di Firebase</span>
       <button class="btn btn-danger btn-sm" onclick="confirmResetMonth()" style="font-size:12px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-trash-2"></use></svg> Hapus Data Bulan Ini</button>
     </div>
   </div>
@@ -4871,6 +4902,7 @@ async function loadMonthsFromFirebase() {
 
 function openStorageModal() {
   updateStorageInfo();
+  expInit();
   document.getElementById('storage-modal').classList.add('open');
   document.getElementById('import-status').style.display = 'none';
   document.getElementById('btn-confirm-import').style.display = 'none';
@@ -4923,34 +4955,34 @@ function clearState() { confirmResetMonth(); }
 // =============================================
 // pendingImportData declared above
 
-function exportExcel(scope) {
-  if (typeof XLSX === 'undefined') { toast('Library Excel belum siap','error'); return; }
-  const data = scope === 'month' ? allData.filter(d=>!d.hidden) : allData;
-  const wsData = [
-    ['TANGGAL','NAMA AUDIT','OUTLET','DIVISI','NAMA STAFF','JENIS TEMUAN',
-     'TINDAKAN AWAL','TINDAKAN DIREKSI','PRIORITAS','WEEK','KETERANGAN',
-     'Link Staging','BUKTI','SANGGAHAN STAFF','STATUS'],
-    ...data.map(d => [
-      d.tgl, d.aud||'', d.outlet, d.div, d.staff, d.jenis,
-      d.tindakan||'', d.tindakan_direksi||'', d.priority||'', d.w, d.ket,
-      d.link||'', d.gdrive||'', d.sang||'',
-      d.presented ? 'Sudah Presentasi' : d.hidden ? 'Dibatalkan' : 'Belum Presentasi'
-    ])
-  ];
+// ---------- Export temuan: Mingguan / Bulanan / Tahunan ----------
+const EXP_HDR = ['TANGGAL','NAMA AUDIT','OUTLET','DIVISI','NAMA STAFF','JENIS TEMUAN',
+  'TINDAKAN AWAL','TINDAKAN DIREKSI','PRIORITAS','WEEK','KETERANGAN',
+  'Link Staging','BUKTI','SANGGAHAN STAFF','STATUS'];
+function expRow(d) {
+  return [d.tgl, d.aud||'', d.outlet, d.div, d.staff, d.jenis,
+    d.tindakan||'', d.tindakan_direksi||'', d.priority||'', d.w, d.ket,
+    d.link||'', d.gdrive||'', d.sang||'',
+    d.presented ? 'Sudah Presentasi' : d.hidden ? 'Dibatalkan' : 'Belum Presentasi'];
+}
+function buildAuditWorkbook(data, periodLabel, withMonth) {
+  const wsData = [ withMonth ? [...EXP_HDR, 'BULAN'] : EXP_HDR,
+    ...data.map(d => withMonth ? [...expRow(d), getCurrentMonthLabel(d._m)] : expRow(d)) ];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [{wch:12},{wch:10},{wch:18},{wch:6},{wch:24},{wch:20},{wch:16},{wch:20},{wch:10},{wch:8},{wch:60},{wch:45},{wch:40},{wch:40},{wch:20}];
+  ws['!cols'] = [{wch:12},{wch:10},{wch:18},{wch:6},{wch:24},{wch:20},{wch:16},{wch:20},{wch:10},{wch:8},{wch:60},{wch:45},{wch:40},{wch:40},{wch:20}].concat(withMonth ? [{wch:16}] : []);
   XLSX.utils.book_append_sheet(wb, ws, 'Master Operational');
   // Summary sheet
-  const dc={}, jc={};
-  data.forEach(d => { dc[d.div]=(dc[d.div]||0)+1; jc[d.jenis]=(jc[d.jenis]||0)+1; });
+  const dc={}, jc={}, mc={};
+  data.forEach(d => { dc[d.div]=(dc[d.div]||0)+1; jc[d.jenis]=(jc[d.jenis]||0)+1; if (withMonth) mc[d._m]=(mc[d._m]||0)+1; });
   const sumData = [
     ['RINGKASAN',''],['',''],
-    ['Periode', getCurrentMonthLabel(currentMonth)],
+    ['Periode', periodLabel],
     ['Total Temuan', data.length],
     ['Sudah Presentasi', data.filter(d=>d.presented).length],
     ['HIGH Priority', data.filter(d=>d.priority==='HIGH').length],
     ['LOW Priority', data.filter(d=>d.priority==='LOW').length],
+    ...(withMonth ? [['',''],['PER BULAN',''], ...Object.keys(mc).sort().map(m=>[getCurrentMonthLabel(m), mc[m]])] : []),
     ['',''],['PER DIVISI',''],
     ...Object.entries(dc).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,v]),
     ['',''],['PER JENIS',''],
@@ -4959,22 +4991,154 @@ function exportExcel(scope) {
   const wsSum = XLSX.utils.aoa_to_sheet(sumData);
   wsSum['!cols'] = [{wch:26},{wch:12}];
   XLSX.utils.book_append_sheet(wb, wsSum, 'Ringkasan');
-  XLSX.writeFile(wb, `FTL_GYM_Audit_${currentMonth.replace('-','_')}.xlsx`);
+  return wb;
+}
+function csvCell(v) { const t = String(v ?? ''); return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }
+function buildAuditCSV(data, withMonth) {
+  const hdr = ['Tanggal','Auditor','Outlet','Divisi','Staff','Prioritas','Jenis','Tindakan','Week','Keterangan'].concat(withMonth ? ['Bulan'] : []);
+  const rows = data.map(d => [d.tgl,d.aud||'',d.outlet,d.div,d.staff||'',d.priority||'',d.jenis,d.tindakan_direksi||'',d.w,d.ket||''].concat(withMonth ? [getCurrentMonthLabel(d._m)] : []));
+  return '\ufeff' + [hdr, ...rows].map(r => r.map(csvCell).join(',')).join('\n');
+}
+function downloadCSV(text, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type:'text/csv;charset=utf-8' }));
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+// Tombol lama (dipanggil dari tempat lain): tetap bekerja seperti sebelumnya untuk bulan aktif
+function exportExcel(scope) {
+  if (typeof XLSX === 'undefined') { toast('Library Excel belum siap','error'); return; }
+  const data = scope === 'month' ? allData.filter(d=>!d.hidden) : allData;
+  XLSX.writeFile(buildAuditWorkbook(data, getCurrentMonthLabel(currentMonth), false), `FTL_GYM_Audit_${currentMonth.replace('-','_')}.xlsx`);
   toast('File Excel berhasil didownload!');
   document.getElementById('storage-modal').classList.remove('open');
 }
-
 function exportCSV() {
-  const data = allData.filter(d=>!d.hidden);
-  const hdr = ['Tanggal','Auditor','Outlet','Divisi','Staff','Prioritas','Jenis','Tindakan','Week','Keterangan'];
-  const rows = data.map(d => [d.tgl,d.aud||'',d.outlet,d.div,`"${(d.staff||'').replace(/"/g,"'")}"`,d.priority||'',d.jenis,d.tindakan_direksi||'',d.w,`"${(d.ket||'').replace(/"/g,"'")}"`]);
-  const csv = [hdr,...rows].map(r=>r.join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-  a.download = `FTL_GYM_Audit_${currentMonth}.csv`;
-  a.click();
+  downloadCSV(buildAuditCSV(allData.filter(d=>!d.hidden), false), `FTL_GYM_Audit_${currentMonth}.csv`);
   toast('CSV berhasil didownload!');
 }
+
+// Data bulan mana pun (bulan aktif: data di layar; bulan lain: langsung dari Firebase)
+const _expCache = {};
+async function expFetchMonth(m) {
+  if (m === currentMonth) return allData.slice();
+  if (_expCache[m]) return _expCache[m];
+  let out = null;
+  try {
+    const mr = await fetch(metaPath(m) + '?t=' + Date.now());
+    if (!mr.ok) throw new Error('HTTP ' + mr.status);
+    const meta = await mr.json();
+    if (meta && meta.migrated) {
+      const r = await fetch(itemsPath(m) + '?t=' + Date.now());
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = (await r.json()) || {};
+      out = Object.keys(j).filter(k => j[k] && typeof j[k] === 'object').map(k => rtNorm(j[k], k)).sort(rtByOrd);
+    } else {
+      const r = await fetch(getFirebasePath(m) + '?t=' + Date.now());
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      const arr = j && j.data ? (Array.isArray(j.data) ? j.data : Object.values(j.data)) : [];
+      out = arr.filter(d => d && typeof d === 'object').map((d, i) => rtNorm(d, i));
+    }
+  } catch(e) {
+    console.warn('Export: gagal mengambil ' + m + ' dari Firebase, memakai cache', e);
+    try { const c = localStorage.getItem('ftlgym_cache_' + m); out = c ? JSON.parse(c).map((d, i) => rtNorm(d, i)) : []; } catch(e2) { out = []; }
+  }
+  _expCache[m] = out;
+  return out;
+}
+let expPeriod = 'month', _expToken = 0, _expBusy = false;
+function expMonths() { return [...new Set(getAllMonths().concat(currentMonth ? [currentMonth] : []))].filter(m => /^\d{4}-\d{2}$/.test(m)).sort().reverse(); }
+function expInit() {
+  Object.keys(_expCache).forEach(k => delete _expCache[k]);   // ambil data terbaru setiap kali modal dibuka
+  const months = expMonths();
+  const ms = document.getElementById('exp-month');
+  ms.innerHTML = months.map(m => `<option value="${m}">${htmlEsc(getCurrentMonthLabel(m))}</option>`).join('');
+  ms.value = months.includes(currentMonth) ? currentMonth : (months[0] || '');
+  const years = [...new Set(months.map(m => m.slice(0, 4)))];
+  const ys = document.getElementById('exp-year');
+  ys.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  ys.value = (currentMonth || '').slice(0, 4) || years[0] || '';
+  document.getElementById('exp-hidden').checked = false;
+  expSetPeriod('month');
+}
+function expSetPeriod(p) {
+  expPeriod = p;
+  document.querySelectorAll('.exp-seg button').forEach(b => { const on = b.dataset.p === p; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  document.getElementById('exp-month-wrap').hidden = p === 'year';
+  document.getElementById('exp-week-wrap').hidden = p !== 'week';
+  document.getElementById('exp-year-wrap').hidden = p !== 'year';
+  expRefresh(true);
+}
+// Kumpulkan temuan sesuai pilihan
+async function expCollect(rebuildWeeks) {
+  const incHidden = document.getElementById('exp-hidden').checked;
+  const keep = d => incHidden || !d.hidden;
+  if (expPeriod === 'year') {
+    const y = document.getElementById('exp-year').value;
+    const months = expMonths().filter(m => m.startsWith(y + '-')).sort();
+    const parts = await Promise.all(months.map(m => expFetchMonth(m).then(arr => arr.map(d => ({ ...d, _m: m })))));
+    const data = parts.flat().filter(keep);
+    return { data, label: 'Tahun ' + y, tag: y, csvTag: y, withMonth: true, months: months.length };
+  }
+  const m = document.getElementById('exp-month').value;
+  const all = (await expFetchMonth(m)).map(d => ({ ...d, _m: m }));
+  if (expPeriod === 'week') {
+    const ws = document.getElementById('exp-week');
+    if (rebuildWeeks) {
+      const prev = ws.value;
+      const weeks = [...new Set(all.map(d => String(d.w ?? '')).filter(Boolean))].sort((a, b) => (Number(a) || 99) - (Number(b) || 99) || a.localeCompare(b));
+      ws.innerHTML = weeks.length ? weeks.map(w => `<option value="${htmlEsc(w)}">${/^\d+$/.test(w) ? 'Week ' + w : htmlEsc(w)}</option>`).join('') : '<option value="">Tidak ada data week</option>';
+      ws.value = weeks.includes(prev) ? prev : (weeks[0] || '');
+    }
+    const w = ws.value;
+    const data = w ? all.filter(d => String(d.w) === w).filter(keep) : [];
+    const wl = /^\d+$/.test(w) ? 'Week ' + w : w;
+    const wt = String(w).replace(/[^\w-]+/g, '');
+    return { data, label: (w ? wl + ' · ' : '') + getCurrentMonthLabel(m), tag: m.replace('-', '_') + '_W' + wt, csvTag: m + '-W' + wt, withMonth: false };
+  }
+  return { data: all.filter(keep), label: getCurrentMonthLabel(m), tag: m.replace('-', '_'), csvTag: m, withMonth: false };
+}
+async function expRefresh(rebuildWeeks) {
+  const tok = ++_expToken;
+  const sum = document.getElementById('exp-summary'), bx = document.getElementById('exp-xlsx'), bc = document.getElementById('exp-csv');
+  sum.innerHTML = ic('loader-circle', 'spin') + ' Menghitung temuan…'; bx.disabled = bc.disabled = true;
+  const r = await expCollect(rebuildWeeks);
+  if (tok !== _expToken) return;   // pilihan sudah berubah lagi
+  const n = r.data.length;
+  sum.innerHTML = n
+    ? `<b>${n.toLocaleString('id-ID')} temuan</b> · ${htmlEsc(r.label)}${r.withMonth ? ` <span style="opacity:.75">(${r.months} bulan)</span>` : ''}`
+    : `Tidak ada temuan untuk ${htmlEsc(r.label)}.`;
+  bx.disabled = bc.disabled = n === 0;
+}
+async function exportPeriod(fmt) {
+  if (_expBusy) return;
+  if (fmt === 'xlsx' && typeof XLSX === 'undefined') { toast('Library Excel belum siap', 'error'); return; }
+  _expBusy = true;
+  try {
+    const r = await expCollect(false);
+    if (!r.data.length) { toast('Tidak ada temuan pada periode ini', 'error'); return; }
+    if (fmt === 'xlsx') {
+      XLSX.writeFile(buildAuditWorkbook(r.data, r.label, r.withMonth), `FTL_GYM_Audit_${r.tag}.xlsx`);
+      toast('File Excel ' + r.label + ' berhasil didownload!');
+    } else {
+      downloadCSV(buildAuditCSV(r.data, r.withMonth), `FTL_GYM_Audit_${r.csvTag}.csv`);
+      toast('CSV ' + r.label + ' berhasil didownload!');
+    }
+    document.getElementById('storage-modal').classList.remove('open');
+  } catch(e) {
+    console.error(e); toast('Export gagal: ' + e.message, 'error');
+  } finally { _expBusy = false; }
+}
+document.querySelectorAll('.exp-seg button').forEach(b => b.addEventListener('click', () => expSetPeriod(b.dataset.p)));
+document.getElementById('exp-month').addEventListener('change', () => expRefresh(true));
+document.getElementById('exp-week').addEventListener('change', () => expRefresh(false));
+document.getElementById('exp-year').addEventListener('change', () => expRefresh(false));
+document.getElementById('exp-hidden').addEventListener('change', () => expRefresh(false));
+document.getElementById('exp-xlsx').addEventListener('click', () => exportPeriod('xlsx'));
+document.getElementById('exp-csv').addEventListener('click', () => exportPeriod('csv'));
 
 function handleImportDrop(e) {
   e.preventDefault();
