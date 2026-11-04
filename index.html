@@ -1019,11 +1019,43 @@ body.is-loading .page.active { display:none !important; }
 .exp-summary { font-size:13px; color:#14532d; background:#fff; border:1px dashed #86efac; border-radius:6px; padding:8px 10px; margin-bottom:10px; min-height:20px; }
 .exp-actions { display:flex; gap:8px; flex-wrap:wrap; }
 .exp-actions .btn:disabled { opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+/* Layar login akun */
+.lg-label { font-size:12px; font-weight:600; color:rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:.6px; display:block; margin-bottom:8px; }
+.lg-input { width:100%; box-sizing:border-box; background:rgba(255,255,255,0.07); border:1.5px solid rgba(255,255,255,0.14); border-radius:10px; padding:13px 16px; font-size:15px; color:#fff; font-family:'Inter',sans-serif; outline:none; transition:border-color .2s, box-shadow .2s; }
+.lg-input::placeholder { color:rgba(255,255,255,0.3); }
+.lg-input:focus { border-color:rgba(96,165,250,0.6); box-shadow:0 0 0 3px rgba(59,130,246,0.18); }
+.lg-eye { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:rgba(255,255,255,0.5); font-size:16px; padding:4px; }
+.lg-msg { border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; line-height:1.5; }
+.lg-err { background:rgba(220,38,38,0.15); border:1px solid rgba(220,38,38,0.35); color:#fecaca; }
+.lg-info { background:rgba(59,130,246,0.15); border:1px solid rgba(96,165,250,0.35); color:#dbeafe; }
+.lg-btn { width:100%; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; border:none; border-radius:10px; padding:14px; font-size:14px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; box-shadow:0 4px 16px rgba(59,130,246,0.4); transition:transform .2s, box-shadow .2s, opacity .2s; }
+.lg-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 20px rgba(59,130,246,0.5); }
+.lg-btn:disabled { opacity:.6; cursor:wait; }
+.lg-link { background:none; border:none; color:rgba(147,197,253,0.9); font:inherit; font-size:13px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+.lg-uid { font-size:12px; color:rgba(255,255,255,0.6); margin:-4px 0 14px; word-break:break-all; }
+.lg-uid code { color:#fff; background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; }
+/* Akun di bilah atas */
+.user-chip { display:flex; align-items:center; gap:6px; }
+.user-chip[hidden] { display:none !important; }
+.user-name { font-size:12px; font-weight:600; color:var(--text2); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.role-badge { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; }
+.rb-viewer { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+.rb-auditor { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+@media (max-width:768px) { .user-name, .uc-out span { display:none; } }
+/* Mode lihat saja (BD): kontrol pengubah data disembunyikan */
+body.role-viewer .nav-item[onclick*="navigate('input')"], body.role-viewer #bn-input,
+body.role-viewer button[onclick="navigate('input')"], body.role-viewer button[onclick="newMonth()"],
+body.role-viewer [onclick*="openEditModal("], body.role-viewer [onclick*="delItem("], body.role-viewer [onclick*="deleteFromEdit("],
+body.role-viewer [onclick*="setPriority("], body.role-viewer [onclick*="togglePresented("], body.role-viewer [onclick*="toggleHidden("],
+body.role-viewer [onclick*="markWeekPresented("], body.role-viewer [onclick*="confirmResetMonth("],
+body.role-viewer .imp-box, body.role-viewer .pres-prio-label, body.role-viewer .pres-prio-btns { display:none !important; }
+.td-ro { font-size:14px; font-weight:700; color:var(--text); line-height:1.45; white-space:pre-wrap; padding:4px 6px; }
+.td-ro-empty { font-weight:500; color:var(--text3); font-style:italic; }
 </style>
 </head>
 <body>
 <!-- Ikon: Lucide (lucide-static v0.460.0, lisensi ISC) — ditanam langsung, tanpa koneksi internet -->
-<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" /></symbol><symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m4.9 4.9 14.2 14.2" /></symbol><symbol id="i-building-2" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /> <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /> <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /> <path d="M10 6h4" /> <path d="M10 10h4" /> <path d="M10 14h4" /> <path d="M10 18h4" /></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /> <circle cx="12" cy="13" r="3" /></symbol><symbol id="i-chart-column" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16" /> <path d="M18 17V9" /> <path d="M13 17V5" /> <path d="M8 17v-3" /></symbol><symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /></symbol><symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" /></symbol><symbol id="i-clipboard-list" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /> <path d="M12 11h4" /> <path d="M12 16h4" /> <path d="M8 11h.01" /> <path d="M8 16h.01" /></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16 14" /></symbol><symbol id="i-clock-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16.5 12" /></symbol><symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" /></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="7 10 12 15 17 10" /> <line x1="12" x2="12" y1="15" y2="3" /></symbol><symbol id="i-dumbbell" viewBox="0 0 24 24"><path d="M14.4 14.4 9.6 9.6" /> <path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z" /> <path d="m21.5 21.5-1.4-1.4" /> <path d="M3.9 3.9 2.5 2.5" /> <path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z" /></symbol><symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /> <circle cx="12" cy="12" r="3" /></symbol><symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" /> <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" /> <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" /> <path d="m2 2 20 20" /></symbol><symbol id="i-file-pen-line" viewBox="0 0 24 24"><path d="m18 5-2.414-2.414A2 2 0 0 0 14.172 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2" /> <path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /> <path d="M8 18h1" /></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></symbol><symbol id="i-folder-open" viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></symbol><symbol id="i-folder-tree" viewBox="0 0 24 24"><path d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z" /> <path d="M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.88-.55l-.42-.85a1 1 0 0 0-.92-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z" /> <path d="M3 5a2 2 0 0 0 2 2h3" /> <path d="M3 3v13a2 2 0 0 0 2 2h3" /></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /> <circle cx="9" cy="9" r="2" /> <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /> <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M12 16v-4" /> <path d="M12 8h.01" /></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /> <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></symbol><symbol id="i-loader-circle" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></symbol><symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /></symbol><symbol id="i-medal" viewBox="0 0 24 24"><path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15" /> <path d="M11 12 5.12 2.2" /> <path d="m13 12 5.88-9.8" /> <path d="M8 7h8" /> <circle cx="12" cy="17" r="5" /> <path d="M12 18v-2h-.5" /></symbol><symbol id="i-message-circle-warning" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /> <path d="M12 8v4" /> <path d="M12 16h.01" /></symbol><symbol id="i-message-square" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2" /> <line x1="8" x2="16" y1="21" y2="21" /> <line x1="12" x2="12" y1="17" y2="21" /></symbol><symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /> <path d="m15 5 4 4" /></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5" /> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" /></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="M12 5v14" /></symbol><symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /> <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /> <rect x="6" y="14" width="12" height="8" rx="1" /></symbol><symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /> <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /> <path d="M7 3v4a1 1 0 0 0 1 1h7" /></symbol><symbol id="i-scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /> <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /> <path d="M7 21h10" /> <path d="M12 3v18" /> <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /> <path d="m21 21-4.3-4.3" /></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /> <circle cx="12" cy="12" r="3" /></symbol><symbol id="i-shield-alert" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /> <path d="M12 8v4" /> <path d="M12 16h.01" /></symbol><symbol id="i-shirt" viewBox="0 0 24 24"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" /></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path d="M20 3v4" /> <path d="M22 5h-4" /> <path d="M4 17v2" /> <path d="M5 18H3" /></symbol><symbol id="i-store" viewBox="0 0 24 24"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /> <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /> <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /> <path d="M2 7h20" /> <path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" /></symbol><symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="6" /> <circle cx="12" cy="12" r="2" /></symbol><symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M3 6h18" /> <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /> <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /> <line x1="10" x2="10" y1="11" y2="17" /> <line x1="14" x2="14" y1="11" y2="17" /></symbol><symbol id="i-trending-up" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></symbol><symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /> <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /> <path d="M4 22h16" /> <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /> <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /> <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="17 8 12 3 7 8" /> <line x1="12" x2="12" y1="3" y2="15" /></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /></symbol><symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <circle cx="9" cy="7" r="4" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /></symbol></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" /></symbol><symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m4.9 4.9 14.2 14.2" /></symbol><symbol id="i-building-2" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /> <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /> <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /> <path d="M10 6h4" /> <path d="M10 10h4" /> <path d="M10 14h4" /> <path d="M10 18h4" /></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /></symbol><symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /> <circle cx="12" cy="13" r="3" /></symbol><symbol id="i-chart-column" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16" /> <path d="M18 17V9" /> <path d="M13 17V5" /> <path d="M8 17v-3" /></symbol><symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /></symbol><symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" /></symbol><symbol id="i-clipboard-list" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /> <path d="M12 11h4" /> <path d="M12 16h4" /> <path d="M8 11h.01" /> <path d="M8 16h.01" /></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16 14" /></symbol><symbol id="i-clock-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16.5 12" /></symbol><symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" /></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="7 10 12 15 17 10" /> <line x1="12" x2="12" y1="15" y2="3" /></symbol><symbol id="i-dumbbell" viewBox="0 0 24 24"><path d="M14.4 14.4 9.6 9.6" /> <path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z" /> <path d="m21.5 21.5-1.4-1.4" /> <path d="M3.9 3.9 2.5 2.5" /> <path d="M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z" /></symbol><symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /> <circle cx="12" cy="12" r="3" /></symbol><symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" /> <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" /> <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" /> <path d="m2 2 20 20" /></symbol><symbol id="i-file-pen-line" viewBox="0 0 24 24"><path d="m18 5-2.414-2.414A2 2 0 0 0 14.172 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2" /> <path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /> <path d="M8 18h1" /></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></symbol><symbol id="i-folder-open" viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></symbol><symbol id="i-folder-tree" viewBox="0 0 24 24"><path d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z" /> <path d="M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.88-.55l-.42-.85a1 1 0 0 0-.92-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z" /> <path d="M3 5a2 2 0 0 0 2 2h3" /> <path d="M3 3v13a2 2 0 0 0 2 2h3" /></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /> <circle cx="9" cy="9" r="2" /> <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /> <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M12 16v-4" /> <path d="M12 8h.01" /></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /> <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /> <polyline points="16 17 21 12 16 7" /> <line x1="21" x2="9" y1="12" y2="12" /></symbol><symbol id="i-loader-circle" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></symbol><symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /></symbol><symbol id="i-medal" viewBox="0 0 24 24"><path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15" /> <path d="M11 12 5.12 2.2" /> <path d="m13 12 5.88-9.8" /> <path d="M8 7h8" /> <circle cx="12" cy="17" r="5" /> <path d="M12 18v-2h-.5" /></symbol><symbol id="i-message-circle-warning" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /> <path d="M12 8v4" /> <path d="M12 16h.01" /></symbol><symbol id="i-message-square" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2" /> <line x1="8" x2="16" y1="21" y2="21" /> <line x1="12" x2="12" y1="17" y2="21" /></symbol><symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /> <path d="m15 5 4 4" /></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5" /> <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" /></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="M12 5v14" /></symbol><symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /> <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /> <rect x="6" y="14" width="12" height="8" rx="1" /></symbol><symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /> <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /> <path d="M7 3v4a1 1 0 0 0 1 1h7" /></symbol><symbol id="i-scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /> <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /> <path d="M7 21h10" /> <path d="M12 3v18" /> <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /> <path d="m21 21-4.3-4.3" /></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /> <circle cx="12" cy="12" r="3" /></symbol><symbol id="i-shield-alert" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /> <path d="M12 8v4" /> <path d="M12 16h.01" /></symbol><symbol id="i-shirt" viewBox="0 0 24 24"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" /></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path d="M20 3v4" /> <path d="M22 5h-4" /> <path d="M4 17v2" /> <path d="M5 18H3" /></symbol><symbol id="i-store" viewBox="0 0 24 24"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /> <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /> <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /> <path d="M2 7h20" /> <path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" /></symbol><symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="6" /> <circle cx="12" cy="12" r="2" /></symbol><symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M3 6h18" /> <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /> <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /> <line x1="10" x2="10" y1="11" y2="17" /> <line x1="14" x2="14" y1="11" y2="17" /></symbol><symbol id="i-trending-up" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></symbol><symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /> <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /> <path d="M4 22h16" /> <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /> <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /> <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="17 8 12 3 7 8" /> <line x1="12" x2="12" y1="3" y2="15" /></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /></symbol><symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <circle cx="9" cy="7" r="4" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /></symbol></svg>
 
 
 <!-- LOGIN SCREEN -->
@@ -1040,30 +1072,28 @@ body.is-loading .page.active { display:none !important; }
       <img src="data:image/png;base64,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" alt="FTL Stride" style="width:64px;height:64px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-bottom:16px">
       <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px">FTL Stride</div>
       <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:20px;font-weight:800;color:#fff;letter-spacing:0.5px">Internal Audit Report</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:6px">Masukkan password untuk melanjutkan</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:6px">Masuk dengan akun Anda</div>
     </div>
 
-    <!-- Password form -->
-    <div style="margin-bottom:16px">
-      <label style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:8px">Password</label>
-      <div style="position:relative">
-        <input type="password" id="login-pass" placeholder="••••••••"
-          onkeydown="if(event.key==='Enter')doLogin()"
-          style="width:100%;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.12);border-radius:10px;padding:13px 46px 13px 16px;font-size:15px;color:#fff;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s;letter-spacing:3px"
-          onfocus="this.style.borderColor='rgba(96,165,250,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.12)'">
-        <button onclick="togglePass()" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.35);font-size:16px;padding:4px" id="pass-eye"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg></button>
+    <!-- Form login akun (Firebase Authentication) -->
+    <form id="login-form" onsubmit="event.preventDefault(); doLogin();" autocomplete="on" novalidate>
+      <div style="margin-bottom:14px">
+        <label for="login-user" class="lg-label">Username atau email</label>
+        <input type="text" id="login-user" class="lg-input" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="contoh: auditor01">
       </div>
-    </div>
-
-    <div id="login-error" style="display:none;background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#fca5a5;margin-bottom:14px;text-align:center">
-      <svg class="ic" aria-hidden="true" focusable="false"><use href="#i-circle-x"></use></svg> Password salah. Coba lagi.
-    </div>
-
-    <button onclick="doLogin()" style="width:100%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;box-shadow:0 4px 16px rgba(59,130,246,0.4)"
-      onmouseenter="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(59,130,246,0.5)'"
-      onmouseleave="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,0.4)'">
-      Masuk →
-    </button>
+      <div style="margin-bottom:16px">
+        <label for="login-pass" class="lg-label">Password</label>
+        <div style="position:relative">
+          <input type="password" id="login-pass" class="lg-input" autocomplete="current-password" placeholder="••••••••" style="padding-right:46px">
+          <button type="button" onclick="togglePass()" id="pass-eye" class="lg-eye" aria-label="Tampilkan password"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg></button>
+        </div>
+      </div>
+      <div id="login-error" class="lg-msg lg-err" role="alert" style="display:none"></div>
+      <div id="login-info" class="lg-msg lg-info" role="status" style="display:none"></div>
+      <button type="submit" id="login-btn" class="lg-btn">Masuk →</button>
+      <div style="text-align:center;margin-top:14px"><button type="button" class="lg-link" onclick="forgotPassword()">Lupa password?</button></div>
+    </form>
+    <div id="login-noaccess" style="display:none"></div>
 
     <div style="text-align:center;margin-top:20px;font-size:12px;color:rgba(255,255,255,0.2)">
       FTL Stride · Internal Use Only
@@ -1166,6 +1196,7 @@ body.is-loading .page.active { display:none !important; }
         <div id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#f59e0b;flex-shrink:0;transition:background 0.3s"></div>
         <span id="sync-label">Menghubungkan...</span>
       </div>
+      <div class="user-chip" id="user-chip" hidden><span class="role-badge" id="role-badge"></span><span class="user-name" id="user-name"></span><button type="button" class="btn btn-ghost btn-sm uc-out" onclick="doLogout()" title="Keluar dari akun"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-log-out"></use></svg><span>Keluar</span></button></div>
       <button class="btn btn-ghost" style="border-color:#217346;color:#217346;font-size:12px" onclick="openStorageModal()"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-save"></use></svg> Export</button>
       <button class="btn btn-primary" onclick="navigate('input')">+ Input Temuan</button>
     </div>
@@ -1970,7 +2001,7 @@ body.is-loading .page.active { display:none !important; }
     </div>
 
     <!-- IMPORT -->
-    <div style="background:var(--primary-pale);border:1px solid var(--primary-mid);border-radius:8px;padding:14px;margin-bottom:14px">
+    <div class="imp-box" style="background:var(--primary-pale);border:1px solid var(--primary-mid);border-radius:8px;padding:14px;margin-bottom:14px">
       <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-upload"></use></svg> Import dari Excel</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Upload file .xlsx untuk menambah atau mengganti data.</div>
       <div style="background:#fff;border:2px dashed var(--primary-mid);border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-bottom:10px"
@@ -2002,6 +2033,9 @@ body.is-loading .page.active { display:none !important; }
 
 <div class="toast-container" id="toasts"></div>
 
+<!-- Firebase Authentication (login akun) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 // Ikon garis seragam (Lucide). ic('nama') → <svg> yang mengikuti warna & ukuran teks di sekitarnya.
 function ic(name, cls) { return '<svg class="ic' + (cls ? ' ' + cls : '') + '" aria-hidden="true" focusable="false"><use href="#i-' + name + '"></use></svg>'; }
@@ -2093,6 +2127,7 @@ let presPriorityFilter = 'all'; // persists across refresh
 // NAVIGATION
 // =============================================
 function navigate(page) {
+  if (page === 'input' && userRole === 'viewer') { toast('Mode lihat saja: akun BD tidak bisa menambah temuan', 'info'); page = 'dashboard'; }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const _pg = document.getElementById('page-'+page);
@@ -2298,6 +2333,7 @@ function filterTableWeek(v) { tableWeekFilter=v; renderTable(); }
 function filterTablePriority(v) { tablePriorityFilter=v; renderTable(); }
 
 function setPriority(id, val) {
+  if (!canEdit()) return;
   const item = allData.find(d=>d.id===id);
   if (!item) return;
   item.priority = val;
@@ -3071,7 +3107,7 @@ function renderPresList() {
           <button onclick="toggleHidden(${d.id})" style="font-size:12px;padding:3px 7px;border-radius:5px;border:1px solid ${d.hidden?'#fde047':'var(--border)'};background:${d.hidden?'#fef9c3':'var(--surface2)'};cursor:pointer;color:${d.hidden?'#d97706':'#dc2626'};font-weight:600;white-space:nowrap">${d.hidden?(ic('refresh-cw')+' Aktifkan'):(ic('ban')+' Batalkan')}</button>
           <button onclick="openEditModal(${d.id})" style="font-size:12px;padding:3px 7px;border-radius:5px;border:1px solid #bfdbfe;background:#eff6ff;cursor:pointer;color:#1e40af;font-weight:600;white-space:nowrap">${ic('pencil')} Edit</button>
           <div style="border-top:1px solid var(--border);padding-top:4px;width:100%;display:flex;flex-direction:column;gap:3px;align-items:center">
-            <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase">Prioritas</div>
+            <div class="pres-prio-label" style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase">Prioritas</div>
             <div class="pres-prio-btns">
               <button onclick="setPriority(${d.id},'HIGH')" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1.5px solid ${d.priority==='HIGH'?'#dc2626':'#fecaca'};background:${d.priority==='HIGH'?'#dc2626':'#fef2f2'};color:${d.priority==='HIGH'?'#fff':'#dc2626'};cursor:pointer;font-weight:700">${pdot()} Tinggi</button>
               <button onclick="setPriority(${d.id},'LOW')" style="font-size:12px;padding:3px 8px;border-radius:5px;border:1.5px solid ${d.priority==='LOW'?'#1e40af':'#bfdbfe'};background:${d.priority==='LOW'?'#1e40af':'#eff6ff'};color:${d.priority==='LOW'?'#fff':'#1e40af'};cursor:pointer;font-weight:700">${pdot()} Rendah</button>
@@ -3085,6 +3121,7 @@ function renderPresList() {
 }
 function presSearch(q) { presSearchVal=q.toLowerCase(); renderPresList(); }
 function togglePresented(id) {
+  if (!canEdit()) return;
   const item = allData.find(d=>d.id===id);
   if (!item) return;
   item.presented = !item.presented;
@@ -3099,6 +3136,7 @@ function togglePresented(id) {
   renderDashboard();
 }
 function toggleHidden(id) {
+  if (!canEdit()) return;
   const item = allData.find(d=>d.id===id);
   if (!item) return;
   item.hidden = !item.hidden;
@@ -3120,6 +3158,7 @@ function toggleShowHidden() {
   renderPresList();
 }
 function markWeekPresented() {
+  if (!canEdit()) return;
   const week = activeWeek;
   const targets = allData.filter(d => !d.hidden && (week==='all' || d.w==week));
   if (!targets.length) { toast('Tidak ada temuan untuk ditandai', 'error'); return; }
@@ -3721,6 +3760,7 @@ function resetForm() {
 }
 
 function submitTemuan() {
+  if (!canEdit()) return;
   const tgl      = document.getElementById('f-tgl').value;
   const aud      = document.getElementById('f-auditor').value;
   const outlet   = document.getElementById('f-outlet').value;
@@ -3801,6 +3841,7 @@ function closeModalDirect() { document.getElementById('modal-wrap').classList.re
 
 // ── EDIT FUNCTIONS ─────────────────────────
 function openEditModal(id) {
+  if (!canEdit()) return;
   const d = allData.find(x=>x.id===id);
   if (!d) return;
   _editingId = id;
@@ -3836,6 +3877,7 @@ function setEditPriority(val) {
 }
 
 function saveEdit() {
+  if (!canEdit()) return;
   const id = parseInt(document.getElementById('edit-item-id').value);
   const idx = allData.findIndex(d=>d.id===id);
   if (idx === -1) { toast('Item tidak ditemukan','error'); return; }
@@ -3891,12 +3933,14 @@ function closeEditModal() {
 }
 
 function deleteFromEdit() {
+  if (!canEdit()) return;
   const id = parseInt(document.getElementById('edit-item-id').value);
   closeEditModal();
   deleteWithUndo(id);
 }
 
 function delItem(id) {
+  if (!canEdit()) return;
   deleteWithUndo(id);
 }
 
@@ -3912,6 +3956,7 @@ function _rowElFor(id) {
   return null;
 }
 function deleteWithUndo(id) {
+  if (!canEdit()) return;
   const idx = allData.findIndex(d => d.id === id);
   if (idx < 0) return;
   const entry = { item: JSON.parse(JSON.stringify(allData[idx])), month: currentMonth };
@@ -4224,6 +4269,7 @@ function processExcelFile(file) {
 }
 
 function confirmImport() {
+  if (!canEdit()) return;
   if (!pendingImportData) return;
   const mode = document.getElementById('excel-import-mode').value;
   if (mode === 'replace') {
@@ -4323,7 +4369,7 @@ function saveMonthsList(months) {
 }
 
 function ensureMonthExists(month) {
-  if (!month) return;
+  if (!month || userRole !== 'auditor') return;
   const months = getAllMonths();
   if (!months.includes(month)) {
     months.unshift(month);
@@ -4386,6 +4432,7 @@ let rtSynced = {};        // id → item yang sudah dikirim / dikonfirmasi (dasa
 let rtQueue = [];         // perubahan yang belum dikonfirmasi server, berurutan: {url, upd}
 let rtChain = Promise.resolve();
 let rtES = null, rtPollT = null, rtRetryStreamT = null, rtRetryT = null;
+let rtLegacyView = false;
 let rtMonth = '', rtConn = 'connecting', rtLastJson = '', rtRenderPending = false, rtRebuildT = null;
 
 function rtSetConn(state) {
@@ -4396,6 +4443,7 @@ function rtSetConn(state) {
 
 // ---------- menyimpan (dipanggil di semua tempat yang mengubah data) ----------
 function saveState() {
+  if (userRole !== 'auditor') return Promise.resolve(false);   // akun BD tidak pernah mengirim perubahan
   if (!currentMonth) {
     console.warn('saveState called but currentMonth is empty');
     return Promise.resolve(false);
@@ -4508,8 +4556,21 @@ async function loadMonthData(month) {
     const mr = await fetch(metaPath(month) + '?t=' + Date.now());
     if (!mr.ok) throw new Error('HTTP ' + mr.status);
     const meta = await mr.json();
-    if (!meta || !meta.migrated) await rtMigrate(month);
-    else {
+    rtLegacyView = false;
+    if (!meta || !meta.migrated) {
+      if (userRole !== 'auditor') {
+        // Akun BD tidak menulis apa pun: bulan yang belum dipindahkan auditor dibaca dari lokasi lama apa adanya
+        const lr = await fetch(getFirebasePath(month) + '?t=' + Date.now());
+        if (!lr.ok) throw new Error('HTTP ' + lr.status);
+        const j = await lr.json();
+        const raw = j && j.data ? (Array.isArray(j.data) ? j.data : Object.values(j.data)) : [];
+        const map = {};
+        raw.forEach((d, i) => { if (d && typeof d === 'object') { const it = rtNorm({ ...d }, i); it.ord = i; map[String(it.id)] = it; } });
+        rtRemote = map; rtLegacyView = true; rtLastJson = ''; rtRebuild();
+        return allData;
+      }
+      await rtMigrate(month);
+    } else {
       // peringatan bila masih ada perangkat yang memakai versi lama dan menyimpan ke lokasi lama
       fetch(FIREBASE_URL + '/audit/' + month.replace('-','_') + '/updatedAt.json?t=' + Date.now())
         .then(r => r.ok ? r.json() : null)
@@ -4540,6 +4601,7 @@ async function loadMonthData(month) {
 
 // ---------- menerima perubahan realtime ----------
 function rtStop() {
+  rtGen++;
   if (rtES) { try { rtES.close(); } catch(e) {} rtES = null; }
   if (rtPollT) { clearInterval(rtPollT); rtPollT = null; }
   if (rtRetryStreamT) { clearTimeout(rtRetryStreamT); rtRetryStreamT = null; }
@@ -4555,12 +4617,29 @@ function rtApplyEvent(type, path, data) {
   else if (type === 'patch' && data && typeof data === 'object') Object.keys(data).forEach(k => { rtRemote = rtSetAt(rtRemote, base.concat(rtSegs(k)), rtClone(data[k])); });
   rtScheduleRebuild();
 }
+let rtGen = 0;
 function startRealtimeSync(month) {
   rtStop();
   rtMonth = month;
+  if (rtLegacyView) {
+    // Akun BD pada bulan yang belum dipindahkan auditor: periksa ulang berkala, beralih ke realtime begitu siap
+    rtSetConn('poll');
+    rtPollT = setInterval(async () => {
+      if (currentMonth !== month) return;
+      const before = rtCanon(allData);
+      await loadMonthData(month);
+      if (!rtLegacyView) { startRealtimeSync(month); rtRenderActive(); }
+      else if (rtCanon(allData) !== before) rtRenderActive();
+    }, 15000);
+    return;
+  }
   if (typeof EventSource === 'undefined') { rtStartPolling(month); return; }
+  const gen = rtGen;
+  authToken(false).then(tok => { if (gen === rtGen && currentMonth === month) _startStream(month, tok); });
+}
+function _startStream(month, tok) {
   let es;
-  try { es = new EventSource(itemsPath(month)); } catch(e) { rtStartPolling(month); return; }
+  try { es = new EventSource(_withAuth(itemsPath(month), tok)); } catch(e) { rtStartPolling(month); return; }
   rtES = es;
   let errs = 0;
   const onData = type => ev => {
@@ -4575,7 +4654,7 @@ function startRealtimeSync(month) {
   es.addEventListener('patch', onData('patch'));
   const toPolling = () => { if (rtES !== es) return; rtStop(); rtStartPolling(month); };
   es.addEventListener('cancel', toPolling);
-  es.addEventListener('auth_revoked', toPolling);
+  es.addEventListener('auth_revoked', () => { if (rtES !== es) return; rtStop(); startRealtimeSync(month); });   // token kedaluwarsa → sambung ulang dengan token baru
   es.onopen = () => { if (rtES === es) rtSetConn('live'); };
   es.onerror = () => {
     if (rtES !== es) return;
@@ -4664,6 +4743,7 @@ function tdNoteHtml(id) {
     <div class="td-note-acts"><button type="button" class="td-btn" data-td="keep">Tetap pakai ketikan saya</button><button type="button" class="td-btn" data-td="theirs">Pakai versi itu</button></div></div>`;
 }
 function tdCellHtml(d) {
+  if (userRole === 'viewer') return `<div class="td-ro">${(d.tindakan_direksi || '').trim() ? htmlEsc(d.tindakan_direksi) : '<span class="td-ro-empty">Belum ada tindakan</span>'}</div>`;
   const dr = presDrafts[d.id], st = tdState(d.id);
   const val = dr ? dr.text : (d.tindakan_direksi || '');
   return `<div class="td-wrap${st === 'dirty' ? ' dirty' : ''}${st === 'error' ? ' err' : ''}" id="tdw-${d.id}" data-id="${htmlEsc(d.id)}">
@@ -4693,6 +4773,7 @@ function tdIdFrom(raw) { const it = allData.find(x => String(x.id) === String(ra
 function tdIdOf(el) { const w = el.closest && el.closest('.td-wrap'); return w ? tdIdFrom(w.dataset.id) : null; }
 
 async function saveTindakan(id) {
+  if (!canEdit()) return;
   const item = tdItem(id);
   if (!item || tdSaving.has(id)) return;
   const ta = document.getElementById('td-' + id);
@@ -4866,6 +4947,7 @@ function buildMonthSelector() {
 }
 
 async function newMonth() {
+  if (!canEdit()) return;
   const now = new Date();
   const defaultVal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const input = prompt('Masukkan periode bulan baru (format: YYYY-MM)\nContoh: 2026-06', defaultVal);
@@ -4923,6 +5005,7 @@ function updateStorageInfo() {
 }
 
 async function confirmResetMonth() {
+  if (!canEdit()) return;
   const _lbl = getCurrentMonthLabel(currentMonth);
   const _ok = await askTypedConfirm({
     title: 'Hapus semua data ' + _lbl + '?',
@@ -5146,6 +5229,7 @@ function handleImportDrop(e) {
   if (file) processImportFile(file);
 }
 function handleImportFile(input) {
+  if (!canEdit()) return;
   const file = input.files[0];
   if (file) processImportFile(file);
   input.value = '';
@@ -5210,6 +5294,7 @@ function processImportFile(file) {
   reader.readAsArrayBuffer(file);
 }
 function confirmImport() {
+  if (!canEdit()) return;
   if (!pendingImportData) return;
   const mode = document.getElementById('import-mode').value;
   if (mode==='replace') { allData = pendingImportData; }
@@ -5235,42 +5320,150 @@ function showImportStatus(msg, type) {
 // =============================================
 // LOGIN / PASSWORD
 // =============================================
-// Password bisa diganti di sini:
-const APP_PASSWORD = 'ftlaudit2026';
-const SESSION_KEY  = 'ftlgym_auth_session';
+// Login per akun memakai Firebase Authentication. Peran setiap akun dibaca dari /roles/<uid>:
+//   "auditor" = akses penuh · "viewer" = mode lihat saja (BD)
+const AUTH_CONFIG = {
+  apiKey: 'AIzaSyDCJYg0qFk2Uucjm3UQ-4jnNbBFKu7H1Qc',                       // ← Firebase Console › Project settings › General › Web API Key
+  authDomain: 'reportaudit-epicultura.firebaseapp.com',
+  projectId: 'reportaudit-epicultura',
+  databaseURL: FIREBASE_URL
+};
+const LOGIN_DOMAIN = '@epicultura.com';           // username tanpa "@" otomatis memakai domain ini
+let fbUser = null, userRole = null, _loggingOut = false;
 
-function checkAuth() {
-  try {
-    const saved = sessionStorage.getItem(SESSION_KEY);
-    if (saved === 'ok') {
-      document.getElementById('login-screen').style.display = 'none';
-      return true;
-    }
-  } catch(e) {}
+// Token login otomatis disertakan pada setiap permintaan ke database
+async function authToken(force) { if (!fbUser) return null; try { return await fbUser.getIdToken(!!force); } catch(e) { return null; } }
+const _fetch0 = window.fetch.bind(window);
+const _withAuth = (url, t) => t ? url + (url.indexOf('?') >= 0 ? '&' : '?') + 'auth=' + encodeURIComponent(t) : url;
+window.fetch = async function(input, init) {
+  const url = typeof input === 'string' ? input : (input && input.url) || '';
+  if (url.indexOf(FIREBASE_URL) !== 0) return _fetch0(input, init);
+  const t = await authToken(false);
+  let r = await _fetch0(_withAuth(url, t), init);
+  if (r.status === 401 && t) { const t2 = await authToken(true); if (t2) r = await _fetch0(_withAuth(url, t2), init); }   // token kedaluwarsa → perbarui sekali
+  return r;
+};
+
+function canEdit() {
+  if (userRole === 'auditor') return true;
+  toast('Mode lihat saja: akun BD tidak bisa mengubah data', 'info');
   return false;
 }
-
-function doLogin() {
-  const input = document.getElementById('login-pass');
-  const err   = document.getElementById('login-error');
-  if (!input) return;
-  const val = input.value.trim();
-  if (val === APP_PASSWORD) {
-    try { sessionStorage.setItem(SESSION_KEY, 'ok'); } catch(e) {}
-    const screen = document.getElementById('login-screen');
-    if (screen) {
-      screen.style.transition = 'opacity 0.4s';
-      screen.style.opacity = '0';
-      setTimeout(() => screen.style.display = 'none', 400);
-    }
-    err.style.display = 'none';
-  } else {
-    err.style.display = 'block';
-    input.value = '';
-    input.style.borderColor = 'rgba(220,38,38,0.5)';
-    setTimeout(() => { input.style.borderColor = 'rgba(255,255,255,0.12)'; }, 1500);
-    input.focus();
+const _lg = id => document.getElementById(id);
+function loginMsg(kind, text) {
+  const e = _lg('login-error'), i = _lg('login-info');
+  e.style.display = kind === 'error' ? 'block' : 'none';
+  i.style.display = kind === 'info' ? 'block' : 'none';
+  if (kind === 'error') e.innerHTML = ic('circle-alert') + ' ' + htmlEsc(text);
+  if (kind === 'info') i.innerHTML = ic('loader-circle', 'spin') + ' ' + htmlEsc(text);
+}
+function setLoginBusy(busy, text) {
+  const b = _lg('login-btn'); b.disabled = busy; b.textContent = busy ? 'Memproses…' : 'Masuk →';
+  if (busy && text) loginMsg('info', text); else if (!busy) _lg('login-info').style.display = 'none';
+}
+function showLoginScreen() {
+  const sc = _lg('login-screen'); sc.style.display = 'flex'; sc.style.opacity = '1';
+  _lg('login-form').style.display = ''; _lg('login-noaccess').style.display = 'none';
+  setLoginBusy(false);
+  setTimeout(() => { const u = _lg('login-user'); if (u && !u.value) u.focus(); else { const pw = _lg('login-pass'); if (pw) pw.focus(); } }, 50);
+}
+function hideLoginScreen() {
+  const sc = _lg('login-screen'); sc.style.transition = 'opacity 0.4s'; sc.style.opacity = '0';
+  setTimeout(() => { sc.style.display = 'none'; }, 400);
+}
+function shortName(email) { const e = String(email || ''); return e.toLowerCase().endsWith(LOGIN_DOMAIN) ? e.slice(0, -LOGIN_DOMAIN.length) : e; }
+function applyRoleUI() {
+  const v = userRole === 'viewer';
+  document.body.classList.toggle('role-viewer', v);
+  _lg('user-chip').hidden = false;
+  _lg('user-name').textContent = shortName(fbUser && fbUser.email);
+  const rb = _lg('role-badge');
+  rb.className = 'role-badge ' + (v ? 'rb-viewer' : 'rb-auditor');
+  rb.innerHTML = v ? ic('eye') + ' Mode lihat saja · BD' : ic('circle-check') + ' Auditor';
+}
+async function fetchRole(uid) {
+  const r = await fetch(FIREBASE_URL + '/roles/' + encodeURIComponent(uid) + '.json?t=' + Date.now());
+  if (r.status === 401 || r.status === 403) return null;
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const v = await r.json();
+  return typeof v === 'string' ? v : null;
+}
+function showNoAccess(u, roleRaw) {
+  const box = _lg('login-noaccess');
+  _lg('login-form').style.display = 'none';
+  const hint = roleRaw && /^(auditor|viewer)$/i.test(roleRaw.trim())
+    ? 'Peran tertulis "' + roleRaw + '". Tulis dengan huruf kecil semua: auditor atau viewer.'
+    : 'Minta admin audit menambahkan UID di bawah ini ke folder roles dengan nilai auditor atau viewer.';
+  box.innerHTML = `<div class="lg-msg lg-err" style="display:block;text-align:left">${ic('circle-alert')} Akun <b>${htmlEsc(shortName(u.email))}</b> belum diberi akses ke dashboard ini.<br><span style="opacity:.85">${htmlEsc(hint)}</span></div>
+    <div class="lg-uid">UID: <code>${htmlEsc(u.uid)}</code></div>
+    <button type="button" class="lg-btn" onclick="doLogout()">Keluar & masuk dengan akun lain</button>`;
+  box.style.display = 'block';
+  _lg('login-screen').style.display = 'flex';
+}
+// Menunggu sampai pengguna login dengan akun yang punya peran
+function authGate() {
+  return new Promise(resolve => {
+    if (typeof firebase === 'undefined' || !firebase.initializeApp) { loginMsg('error', 'Sistem login gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.'); return; }
+    if (!AUTH_CONFIG.apiKey || AUTH_CONFIG.apiKey.indexOf('ISI_') === 0) { loginMsg('error', 'Konfigurasi login belum lengkap (Web API Key). Hubungi admin audit.'); _lg('login-btn').disabled = true; return; }
+    if (!firebase.apps.length) firebase.initializeApp(AUTH_CONFIG);
+    let opened = false;
+    setLoginBusy(true, 'Memeriksa sesi…');
+    firebase.auth().onAuthStateChanged(async u => {
+      if (!u) {
+        fbUser = null;
+        if (opened) { if (!_loggingOut) location.reload(); return; }   // keluar / akun dicabut → kembali ke layar login
+        showLoginScreen();
+        return;
+      }
+      fbUser = u;
+      setLoginBusy(true, 'Memeriksa akses akun…');
+      let role;
+      try { role = await fetchRole(u.uid); }
+      catch(e) { setLoginBusy(false); loginMsg('error', 'Gagal memeriksa akses akun (' + e.message + '). Periksa koneksi lalu coba lagi.'); return; }
+      if (role !== 'auditor' && role !== 'viewer') { setLoginBusy(false); showNoAccess(u, role); return; }
+      if (opened) return;
+      opened = true; userRole = role;
+      applyRoleUI();
+      hideLoginScreen();
+      resolve();
+    });
+  });
+}
+async function doLogin() {
+  const id = (_lg('login-user').value || '').trim(), pw = _lg('login-pass').value || '';
+  if (!id || !pw) { loginMsg('error', 'Isi username dan password.'); return; }
+  if (typeof firebase === 'undefined' || !firebase.apps.length) { loginMsg('error', 'Sistem login belum siap. Muat ulang halaman.'); return; }
+  const email = id.indexOf('@') >= 0 ? id : id + LOGIN_DOMAIN;
+  setLoginBusy(true, 'Masuk…');
+  try {
+    await firebase.auth().signInWithEmailAndPassword(email, pw);
+  } catch(e) {
+    setLoginBusy(false);
+    const c = e && e.code || '';
+    const msg = /invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(c) ? 'Username atau password salah.'
+      : /too-many-requests/.test(c) ? 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.'
+      : /network-request-failed/.test(c) ? 'Tidak ada koneksi internet.'
+      : /user-disabled/.test(c) ? 'Akun ini dinonaktifkan. Hubungi admin audit.'
+      : 'Gagal masuk (' + (c || e.message) + ').';
+    loginMsg('error', msg);
+    const p = _lg('login-pass'); p.value = ''; p.focus();
   }
+}
+async function forgotPassword() {
+  const id = (_lg('login-user').value || '').trim();
+  if (!id) { loginMsg('error', 'Isi username atau email dulu, lalu klik "Lupa password?".'); _lg('login-user').focus(); return; }
+  const email = id.indexOf('@') >= 0 ? id : id + LOGIN_DOMAIN;
+  try { await firebase.auth().sendPasswordResetEmail(email); } catch(e) { /* jangan bocorkan apakah akun terdaftar */ }
+  const i = _lg('login-info'); _lg('login-error').style.display = 'none';
+  i.innerHTML = ic('circle-check') + ' Jika akun terdaftar dengan email aktif, link reset password dikirim ke <b>' + htmlEsc(email) + '</b>. Akun BD: hubungi admin audit untuk reset password.';
+  i.style.display = 'block';
+}
+async function doLogout() {
+  if (rtQueue.length) { toast('Masih ada perubahan yang sedang disimpan. Tunggu sebentar lalu coba lagi.', 'error'); return; }
+  if (Object.keys(presDrafts).length) { toast('Masih ada tindakan yang belum disimpan. Simpan atau batalkan dulu.', 'error'); return; }
+  _loggingOut = true;
+  try { rtStop(); await firebase.auth().signOut(); } catch(e) {}
+  location.reload();
 }
 
 function togglePass() {
@@ -5368,8 +5561,8 @@ window.addEventListener('resize', checkMobile);
 // INIT
 // =============================================
 window.onload = async () => {
-  // Check password
-  checkAuth();
+  // Login akun (Firebase Authentication) & peran — data baru dimuat setelah berhasil masuk
+  await authGate();
 
   // Hide loading overlay
   const overlay = document.getElementById('loading-overlay');
