@@ -1051,6 +1051,16 @@ body.role-viewer [onclick*="markWeekPresented("], body.role-viewer [onclick*="co
 body.role-viewer .imp-box, body.role-viewer .pres-prio-label, body.role-viewer .pres-prio-btns { display:none !important; }
 .td-ro { font-size:14px; font-weight:700; color:var(--text); line-height:1.45; white-space:pre-wrap; padding:4px 6px; }
 .td-ro-empty { font-weight:500; color:var(--text3); font-style:italic; }
+/* Layar login: tampilan "Mohon tunggu" */
+.lg-loading { display:flex; flex-direction:column; align-items:center; gap:10px; padding:18px 0 8px; text-align:center; }
+.lg-spinner { width:42px; height:42px; border-radius:50%; border:3px solid rgba(255,255,255,0.12); border-top-color:#60a5fa; animation:lgSpin .9s linear infinite; margin-bottom:6px; }
+@keyframes lgSpin { to { transform:rotate(360deg); } }
+.lg-loading-title { font-size:15px; font-weight:700; color:#fff; }
+.lg-loading-text { font-size:13px; color:rgba(255,255,255,0.55); min-height:18px; }
+.lg-loading-text::after { content:''; display:inline-block; width:1.2em; text-align:left; animation:lgDots 1.4s steps(4,end) infinite; }
+@keyframes lgDots { 0% { content:''; } 25% { content:'.'; } 50% { content:'..'; } 75% { content:'...'; } }
+.lg-input[readonly] { cursor:text; }
+@media (prefers-reduced-motion: reduce) { .lg-spinner { animation-duration:2.5s; } }
 </style>
 </head>
 <body>
@@ -1075,17 +1085,23 @@ body.role-viewer .imp-box, body.role-viewer .pres-prio-label, body.role-viewer .
       <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:6px">Masuk dengan akun Anda</div>
     </div>
 
+    <!-- Tampilan menunggu (bawaan saat halaman dibuka) -->
+    <div id="login-loading" class="lg-loading" role="status" aria-live="polite">
+      <div class="lg-spinner" aria-hidden="true"></div>
+      <div class="lg-loading-title">Mohon tunggu…</div>
+      <div class="lg-loading-text" id="login-loading-text">Menyiapkan dashboard</div>
+    </div>
     <!-- Form login akun (Firebase Authentication) -->
-    <form id="login-form" onsubmit="event.preventDefault(); doLogin();" autocomplete="on" novalidate>
+    <form id="login-form" onsubmit="event.preventDefault(); doLogin();" autocomplete="on" novalidate style="display:none">
       <div style="margin-bottom:14px">
         <label for="login-user" class="lg-label">Username atau email</label>
-        <input type="text" id="login-user" class="lg-input" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="contoh: auditor01">
+        <input type="text" id="login-user" name="username" class="lg-input" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="contoh: auditor01" readonly>
       </div>
       <div style="margin-bottom:16px">
         <label for="login-pass" class="lg-label">Password</label>
         <div style="position:relative">
-          <input type="password" id="login-pass" class="lg-input" autocomplete="current-password" placeholder="••••••••" style="padding-right:46px">
-          <button type="button" onclick="togglePass()" id="pass-eye" class="lg-eye" aria-label="Tampilkan password"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg></button>
+          <input type="password" id="login-pass" name="password" class="lg-input" autocomplete="current-password" placeholder="••••••••" style="padding-right:46px" readonly>
+          <button type="button" onclick="togglePass()" id="pass-eye" class="lg-eye" aria-label="Tampilkan password" aria-pressed="false" title="Tampilkan / sembunyikan password"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-eye"></use></svg></button>
         </div>
       </div>
       <div id="login-error" class="lg-msg lg-err" role="alert" style="display:none"></div>
@@ -5361,11 +5377,28 @@ function setLoginBusy(busy, text) {
   const b = _lg('login-btn'); b.disabled = busy; b.textContent = busy ? 'Memproses…' : 'Masuk →';
   if (busy && text) loginMsg('info', text); else if (!busy) _lg('login-info').style.display = 'none';
 }
-function showLoginScreen() {
+// Tampilan kartu login: 'loading' (mohon tunggu) · 'form' · 'noaccess'
+function loginView(view, text) {
   const sc = _lg('login-screen'); sc.style.display = 'flex'; sc.style.opacity = '1';
-  _lg('login-form').style.display = ''; _lg('login-noaccess').style.display = 'none';
+  _lg('login-loading').style.display = view === 'loading' ? '' : 'none';
+  _lg('login-form').style.display = view === 'form' ? '' : 'none';
+  _lg('login-noaccess').style.display = view === 'noaccess' ? 'block' : 'none';
+  if (view === 'loading') _lg('login-loading-text').textContent = text || 'Menyiapkan dashboard';
+}
+// Kolom baru aktif setelah disentuh → Chrome tidak mengisi otomatis saat halaman dibuka
+function armLoginInputs() {
+  ['login-user', 'login-pass'].forEach(id => {
+    const el = _lg(id); if (!el) return;
+    el.setAttribute('readonly', '');
+    const unlock = () => el.removeAttribute('readonly');
+    el.addEventListener('focus', unlock, { once: true });
+    el.addEventListener('pointerdown', unlock, { once: true });
+  });
+}
+function showLoginScreen() {
+  loginView('form');
   setLoginBusy(false);
-  setTimeout(() => { const u = _lg('login-user'); if (u && !u.value) u.focus(); else { const pw = _lg('login-pass'); if (pw) pw.focus(); } }, 50);
+  armLoginInputs();
 }
 function hideLoginScreen() {
   const sc = _lg('login-screen'); sc.style.transition = 'opacity 0.4s'; sc.style.opacity = '0';
@@ -5390,24 +5423,22 @@ async function fetchRole(uid) {
 }
 function showNoAccess(u, roleRaw) {
   const box = _lg('login-noaccess');
-  _lg('login-form').style.display = 'none';
+  loginView('noaccess');
   const hint = roleRaw && /^(auditor|viewer)$/i.test(roleRaw.trim())
     ? 'Peran tertulis "' + roleRaw + '". Tulis dengan huruf kecil semua: auditor atau viewer.'
     : 'Minta admin audit menambahkan UID di bawah ini ke folder roles dengan nilai auditor atau viewer.';
   box.innerHTML = `<div class="lg-msg lg-err" style="display:block;text-align:left">${ic('circle-alert')} Akun <b>${htmlEsc(shortName(u.email))}</b> belum diberi akses ke dashboard ini.<br><span style="opacity:.85">${htmlEsc(hint)}</span></div>
     <div class="lg-uid">UID: <code>${htmlEsc(u.uid)}</code></div>
     <button type="button" class="lg-btn" onclick="doLogout()">Keluar & masuk dengan akun lain</button>`;
-  box.style.display = 'block';
-  _lg('login-screen').style.display = 'flex';
 }
 // Menunggu sampai pengguna login dengan akun yang punya peran
 function authGate() {
   return new Promise(resolve => {
-    if (typeof firebase === 'undefined' || !firebase.initializeApp) { loginMsg('error', 'Sistem login gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.'); return; }
-    if (!AUTH_CONFIG.apiKey || AUTH_CONFIG.apiKey.indexOf('ISI_') === 0) { loginMsg('error', 'Konfigurasi login belum lengkap (Web API Key). Hubungi admin audit.'); _lg('login-btn').disabled = true; return; }
+    if (typeof firebase === 'undefined' || !firebase.initializeApp) { loginView('form'); loginMsg('error', 'Sistem login gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.'); _lg('login-btn').disabled = true; return; }
+    if (!AUTH_CONFIG.apiKey || AUTH_CONFIG.apiKey.indexOf('ISI_') === 0) { loginView('form'); loginMsg('error', 'Konfigurasi login belum lengkap (Web API Key). Hubungi admin audit.'); _lg('login-btn').disabled = true; return; }
     if (!firebase.apps.length) firebase.initializeApp(AUTH_CONFIG);
     let opened = false;
-    setLoginBusy(true, 'Memeriksa sesi…');
+    loginView('loading', 'Memeriksa sesi');
     firebase.auth().onAuthStateChanged(async u => {
       if (!u) {
         fbUser = null;
@@ -5416,15 +5447,15 @@ function authGate() {
         return;
       }
       fbUser = u;
-      setLoginBusy(true, 'Memeriksa akses akun…');
+      loginView('loading', 'Memeriksa akses akun');
       let role;
       try { role = await fetchRole(u.uid); }
-      catch(e) { setLoginBusy(false); loginMsg('error', 'Gagal memeriksa akses akun (' + e.message + '). Periksa koneksi lalu coba lagi.'); return; }
-      if (role !== 'auditor' && role !== 'viewer') { setLoginBusy(false); showNoAccess(u, role); return; }
+      catch(e) { showLoginScreen(); loginMsg('error', 'Gagal memeriksa akses akun (' + e.message + '). Periksa koneksi lalu coba lagi.'); return; }
+      if (role !== 'auditor' && role !== 'viewer') { showNoAccess(u, role); return; }
       if (opened) return;
       opened = true; userRole = role;
       applyRoleUI();
-      hideLoginScreen();
+      loginView('loading', 'Memuat data audit');   // layar ditutup setelah data siap
       resolve();
     });
   });
@@ -5434,11 +5465,12 @@ async function doLogin() {
   if (!id || !pw) { loginMsg('error', 'Isi username dan password.'); return; }
   if (typeof firebase === 'undefined' || !firebase.apps.length) { loginMsg('error', 'Sistem login belum siap. Muat ulang halaman.'); return; }
   const email = id.indexOf('@') >= 0 ? id : id + LOGIN_DOMAIN;
-  setLoginBusy(true, 'Masuk…');
+  _lg('login-error').style.display = 'none';
+  loginView('loading', 'Masuk ke akun');
   try {
     await firebase.auth().signInWithEmailAndPassword(email, pw);
   } catch(e) {
-    setLoginBusy(false);
+    loginView('form'); setLoginBusy(false);
     const c = e && e.code || '';
     const msg = /invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(c) ? 'Username atau password salah.'
       : /too-many-requests/.test(c) ? 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.'
@@ -5472,10 +5504,10 @@ function togglePass() {
   if (!input) return;
   if (input.type === 'password') {
     input.type = 'text'; input.style.letterSpacing = 'normal';
-    if (eye) eye.innerHTML = ic('eye-off');
+    if (eye) { eye.innerHTML = ic('eye-off'); eye.setAttribute('aria-pressed', 'true'); eye.setAttribute('aria-label', 'Sembunyikan password'); }
   } else {
-    input.type = 'password'; input.style.letterSpacing = '3px';
-    if (eye) eye.innerHTML = ic('eye');
+    input.type = 'password'; input.style.letterSpacing = 'normal';
+    if (eye) { eye.innerHTML = ic('eye'); eye.setAttribute('aria-pressed', 'false'); eye.setAttribute('aria-label', 'Tampilkan password'); }
   }
 }
 
@@ -5613,6 +5645,7 @@ window.onload = async () => {
   // Navigate AFTER data is loaded
   await skeletonEnd();
   navigate('dashboard');
+  hideLoginScreen();
   checkMobile();
   console.log('Loaded', allData.length, 'items for', currentMonth);
 };
