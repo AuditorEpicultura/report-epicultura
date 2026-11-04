@@ -1061,6 +1061,52 @@ body.role-viewer .imp-box, body.role-viewer .pres-prio-label, body.role-viewer .
 @keyframes lgDots { 0% { content:''; } 25% { content:'.'; } 50% { content:'..'; } 75% { content:'...'; } }
 .lg-input[readonly] { cursor:text; }
 @media (prefers-reduced-motion: reduce) { .lg-spinner { animation-duration:2.5s; } }
+/* Ringkasan Mode Presentasi */
+.pk-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:14px; }
+.pk-card { position:relative; text-align:left; font:inherit; color:var(--text); background:var(--surface); border:1px solid var(--border); border-top:4px solid var(--cc); border-radius:var(--radius); padding:16px 18px 14px; box-shadow:var(--shadow); cursor:pointer; display:flex; flex-direction:column; gap:4px; transition:transform .3s var(--ease-out), box-shadow .3s, border-color .2s, background-color .2s; }
+.pk-card:hover { transform:translateY(-2px); box-shadow:0 10px 22px -12px rgba(15,23,42,.35); }
+.pk-card.on { background:color-mix(in srgb, var(--cc) 7%, var(--surface)); border-color:var(--cc); box-shadow:0 0 0 2px color-mix(in srgb, var(--cc) 25%, transparent); }
+.pk-card:focus-visible { outline:2px solid var(--cc); outline-offset:2px; }
+.pk-head { display:flex; align-items:center; gap:8px; color:var(--cc); }
+.pk-ic .ic { width:20px; height:20px; }
+.pk-label { font-size:12px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text2); }
+.pk-val { font-family:'Plus Jakarta Sans','Inter',sans-serif; font-size:34px; font-weight:800; line-height:1.1; color:var(--cc); }
+.pk-sub { font-size:13px; color:var(--text3); min-height:18px; }
+.pk-up { color:#dc2626; font-weight:700; } .pk-down { color:#16a34a; font-weight:700; } .pk-muted { color:var(--text3); }
+.pk-panel { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr); gap:22px; }
+.pk-sec + .pk-sec { border-left:1px solid var(--border); padding-left:22px; }
+.pk-sec-title { font-size:12px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text2); margin-bottom:10px; }
+.pk-prog { display:flex; align-items:center; gap:12px; }
+.pk-bar { flex:1; display:flex; height:12px; border-radius:999px; overflow:hidden; background:var(--surface2); }
+.pk-bar span { height:100%; transition:width .6s var(--ease-out); }
+.pk-prog-num { font-size:15px; font-weight:800; white-space:nowrap; color:var(--text); }
+.pk-note { font-size:12px; color:var(--text3); margin-top:8px; }
+.pk-link { background:none; border:none; padding:0; font:inherit; font-size:12px; font-weight:700; color:var(--primary); cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+.pk-legend { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.pk-chip { display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:13px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:4px 10px; cursor:pointer; transition:background-color .2s, border-color .2s, transform .2s; }
+.pk-chip i { width:9px; height:9px; border-radius:50%; display:inline-block; }
+.pk-chip b { font-weight:800; }
+.pk-chip:hover { border-color:#93c5fd; transform:translateY(-1px); }
+.pk-chip.on { background:var(--primary-pale); border-color:var(--primary-light); }
+@media (max-width:900px) { .pk-grid { grid-template-columns:1fr 1fr; } .pk-panel { grid-template-columns:1fr; } .pk-sec + .pk-sec { border-left:none; padding-left:0; border-top:1px solid var(--border); padding-top:14px; } }
+/* Kotak tindakan: terlihat jelas sebagai kolom isian di atas kartu temuan */
+.td-input { background:#f8fafc !important; border:1.5px solid #cbd5e1 !important; box-shadow:inset 0 1px 2px rgba(15,23,42,.06); border-radius:8px; padding:7px 9px; }
+.td-input::placeholder { color:#94a3b8; font-weight:500; }
+.td-input:hover { border-color:#94a3b8 !important; }
+.td-input:focus { background:#fff !important; border-color:#3b82f6 !important; box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+.td-wrap.dirty .td-input { background:#fffbeb !important; border-color:#f59e0b !important; }
+.td-wrap.err .td-input { border-color:#ef4444 !important; }
+.pres-row:hover .td-input:not(:focus) { background:#fff !important; }
+/* Panel progres & komposisi mengisi lebar penuh */
+.pres-count-bar > .pk-panel { flex:1 1 100%; width:100%; }
+/* Bilah atas: tidak terlipat walau berisi info akun */
+.topbar { gap:16px; }
+.topbar > div:first-child { min-width:0; flex:1 1 auto; }
+.topbar-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.topbar-actions { flex:none; }
+.topbar-actions .btn, #sync-label { white-space:nowrap; }
+@media (max-width:1600px) { .user-name, .uc-out span { display:none; } .uc-out { padding-left:8px; padding-right:8px; } }
+@media (max-width:768px) { .role-badge { font-size:0; gap:0; padding:5px 7px; } .role-badge .ic { width:15px; height:15px; } }
 </style>
 </head>
 <body>
@@ -1705,7 +1751,7 @@ body.role-viewer .imp-box, body.role-viewer .pres-prio-label, body.role-viewer .
     </div>
 
     <!-- Summary stats -->
-    <div class="stats-grid" id="pres-stats" style="margin-bottom:14px;"></div>
+    <div class="pk-grid" id="pres-stats"></div>
 
     <!-- Count bar per jenis -->
     <div class="pres-count-bar" id="pres-count-bar" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;box-shadow:var(--shadow);"></div>
@@ -2913,30 +2959,47 @@ function renderPresentasi() {
   const presPSel = document.getElementById('pres-priority-sel');
   if (presPSel && presPSel.value !== presPriorityFilter) presPSel.value = presPriorityFilter;
 
-  // Stats
-  const frauds=data.filter(d=>d.jenis==='Indikasi Fraud');
-  const sp=data.filter(d=>d.tindakan?.toLowerCase().includes('sp'));
-  const presentedCount = data.filter(d=>d.presented).length;
-  const hiddenCount = allData.filter(d=>d.hidden && (activeWeek==='all'||d.w==activeWeek)).length;
-  document.getElementById('pres-stats').innerHTML=[
-    {icon:ic('chart-column'),val:data.length,label:'Total Temuan',c:'#1e40af'},
-    {icon:ic('clock'),val:data.filter(d=>d.jenis==='Ketepatan Waktu').length,label:'Ketepatan Waktu',c:'#dc2626'},
-    {icon:ic('clipboard-list'),val:data.filter(d=>d.jenis==='Kelalaian SOP').length,label:'Kelalaian SOP',c:'#ea580c'},
-    {icon:ic('circle-check'),val:presentedCount,label:'Sudah Dipresentasi',c:'#16a34a'},
-    {icon:ic('ban'),val:hiddenCount,label:'Dibatalkan/Hide',c:'#d97706'},
-  ].map(s=>`<div class="stat-card" style="--cc:${s.c}"><div class="stat-icon">${s.icon}</div><div class="stat-val">${s.val}</div><div class="stat-label">${s.label}</div></div>`).join('');
+  // Ringkasan untuk direksi: 4 kartu utama · progres pembahasan · komposisi jenis
+  const base = getFiltered().filter(d => !d.hidden);
+  const isSP = d => (d.tindakan || '').toLowerCase().includes('sp') || d.tindakan === 'terminate';   // sama dengan filter "Hanya SP"
+  const frauds = base.filter(d => d.jenis === 'Indikasi Fraud');
+  const highs = base.filter(d => d.priority === 'HIGH');
+  const sps = base.filter(isSP);
+  const staffCnt = {};
+  base.forEach(d => { if (!d.staff) return; const k = d.staff.trim().toLowerCase() + '|' + (d.outlet || ''); staffCnt[k] = (staffCnt[k] || 0) + 1; });
+  const repeatStaff = Object.values(staffCnt).filter(n => n >= 2).length;
+  const presentedCount = base.filter(d => d.presented).length;
+  const hiddenCount = allData.filter(d => d.hidden && (activeWeek === 'all' || d.w == activeWeek)).length;
+  const fraudOutlets = new Set(frauds.map(d => d.outlet).filter(Boolean)).size;
+  const fmtN = n => Number(n).toLocaleString('id-ID');
+  const card = (key, on, val, label, sub, c, icon) => `<button type="button" class="pk-card${on ? ' on' : ''}" style="--cc:${c}" data-pk="${key}" aria-pressed="${on}" title="${on ? 'Klik untuk melepas filter' : 'Klik untuk memfilter daftar temuan'}">
+      <span class="pk-head"><span class="pk-ic">${icon}</span><span class="pk-label">${label}</span></span>
+      <span class="pk-val">${fmtN(val)}</span><span class="pk-sub" ${key === 'total' ? 'id="pk-trend"' : ''}>${sub}</span></button>`;
+  document.getElementById('pres-stats').innerHTML =
+    card('total', presFilterVal === 'all' && presPriorityFilter === 'all', base.length, 'Total temuan', '<span class="pk-muted">&nbsp;</span>', '#1e40af', ic('chart-column')) +
+    card('fraud', presFilterVal === 'Indikasi Fraud', frauds.length, 'Indikasi fraud', frauds.length ? fmtN(fraudOutlets) + ' outlet' : 'Tidak ada', '#dc2626', ic('shield-alert')) +
+    card('high', presPriorityFilter === 'HIGH', highs.length, 'Prioritas tinggi', 'dari ' + fmtN(base.length) + ' temuan', '#b45309', ic('triangle-alert')) +
+    card('sp', presFilterVal === 'SP', sps.length, 'SP dikeluarkan', repeatStaff ? fmtN(repeatStaff) + ' staff berulang' : 'Tidak ada staff berulang', '#7c3aed', ic('file-pen-line'));
+  presRenderTrend(base.length);
 
-  // Count bar
-  const jc={};
-  data.forEach(d=>{ jc[d.jenis]=(jc[d.jenis]||0)+1; });
-  document.getElementById('pres-count-bar').innerHTML=`
-    <span style="font-size:12px;font-weight:700;color:var(--text2);margin-right:4px">Rincian:</span>
-    ${Object.entries(jc).sort((a,b)=>b[1]-a[1]).map(([j,c])=>`
-      <div class="pres-count-item">
-        <div class="pres-count-dot" style="background:${(JENIS_CFG[j]||{}).color||'#888'}"></div>
-        <span>${j}</span>
-        <span class="pres-count-num" style="color:${(JENIS_CFG[j]||{}).color||'#333'}">${c}</span>
-      </div>`).join('')}`;
+  // Progres pembahasan & komposisi jenis
+  const pct = base.length ? Math.round(presentedCount / base.length * 100) : 0;
+  const jc = {}; base.forEach(d => { jc[d.jenis] = (jc[d.jenis] || 0) + 1; });
+  const comp = Object.entries(jc).sort((x, y) => y[1] - x[1]);
+  const jcolor = j => (JENIS_CFG[j] || {}).color || '#94a3b8';
+  document.getElementById('pres-count-bar').innerHTML = `
+    <div class="pk-panel">
+      <div class="pk-sec">
+        <div class="pk-sec-title">Progres pembahasan</div>
+        <div class="pk-prog"><div class="pk-bar"><span style="width:${pct}%;background:#16a34a"></span></div><span class="pk-prog-num">${fmtN(presentedCount)} / ${fmtN(base.length)} dibahas</span></div>
+        <div class="pk-note">${base.length - presentedCount > 0 ? `<button type="button" class="pk-link" data-pk="not_presented">Lihat ${fmtN(base.length - presentedCount)} yang belum dibahas</button>` : (base.length ? 'Semua temuan sudah dibahas' : 'Belum ada temuan')}${hiddenCount ? ` · ${fmtN(hiddenCount)} dibatalkan tidak dihitung` : ''}</div>
+      </div>
+      <div class="pk-sec">
+        <div class="pk-sec-title">Komposisi jenis temuan</div>
+        <div class="pk-bar pk-comp">${comp.map(([j, c]) => `<span style="width:${c / base.length * 100}%;background:${jcolor(j)}" title="${htmlEsc(j)}: ${c}"></span>`).join('')}</div>
+        <div class="pk-legend">${comp.map(([j, c]) => `<button type="button" class="pk-chip${presFilterVal === j ? ' on' : ''}" data-pk-jenis="${htmlEsc(j)}"><i style="background:${jcolor(j)}"></i>${htmlEsc(j)} <b>${fmtN(c)}</b></button>`).join('') || '<span class="pk-muted">Belum ada temuan</span>'}</div>
+      </div>
+    </div>`;
 
   renderPresList();
 }
@@ -2966,7 +3029,7 @@ function presFilterPriority(val) {
   // Sync dropdown UI
   const sel = document.getElementById('pres-priority-sel');
   if (sel) sel.value = val;
-  renderPresList();
+  renderPresentasi();
 }
 
 // ── DIVISI DROPDOWN FILTER ─────────────────
@@ -3061,11 +3124,52 @@ function togglePresDiv(div) {
 
   renderPresList();
 }
+// Filter cepat dari kartu ringkasan (tombol filter jenis ikut disinkronkan)
+function presSetFilter(val) {
+  presFilterVal = val;
+  document.querySelectorAll('.pres-filter-chip').forEach(c => c.classList.toggle('active', (c.getAttribute('onclick') || '').indexOf("presFilter('" + val + "',") === 0));
+  renderPresentasi();
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest && e.target.closest('[data-pk], [data-pk-jenis]');
+  if (!t || !t.closest('#page-presentasi')) return;
+  const k = t.dataset.pk, j = t.dataset.pkJenis;
+  if (j) return presSetFilter(presFilterVal === j ? 'all' : j);
+  if (k === 'total') { presPriorityFilter = 'all'; const sel = document.getElementById('pres-priority-sel'); if (sel) sel.value = 'all'; presSetFilter('all'); }
+  else if (k === 'fraud') presSetFilter(presFilterVal === 'Indikasi Fraud' ? 'all' : 'Indikasi Fraud');
+  else if (k === 'sp') presSetFilter(presFilterVal === 'SP' ? 'all' : 'SP');
+  else if (k === 'not_presented') presSetFilter('not_presented');
+  else if (k === 'high') { presPriorityFilter = presPriorityFilter === 'HIGH' ? 'all' : 'HIGH'; const sel = document.getElementById('pres-priority-sel'); if (sel) sel.value = presPriorityFilter; renderPresentasi(); }
+});
+// Tren total temuan: week dipilih → dibanding week sebelumnya; semua week → dibanding bulan lalu
+let _pkTrendTok = 0;
+async function presRenderTrend(total) {
+  const tok = ++_pkTrendTok;
+  let prev = null, label = '';
+  try {
+    if (activeWeek !== 'all') {
+      const w = Number(activeWeek);
+      if (Number.isInteger(w) && w > 1) { prev = allData.filter(d => !d.hidden && d.w == w - 1).length; label = 'week ' + (w - 1); }
+    } else if (currentMonth) {
+      const [y, m] = currentMonth.split('-').map(Number);
+      const pm = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+      if (getAllMonths().includes(pm) && typeof expFetchMonth === 'function') { prev = (await expFetchMonth(pm)).filter(d => !d.hidden).length; label = 'bulan lalu'; }
+    }
+  } catch(e) { prev = null; }
+  if (tok !== _pkTrendTok) return;
+  const el = document.getElementById('pk-trend'); if (!el) return;
+  if (prev === null) { el.innerHTML = '<span class="pk-muted">&nbsp;</span>'; return; }
+  const d = total - prev;
+  el.innerHTML = d > 0 ? `<span class="pk-up">▲ ${d.toLocaleString('id-ID')} dari ${label}</span>`
+    : d < 0 ? `<span class="pk-down">▼ ${(-d).toLocaleString('id-ID')} dari ${label}</span>`
+    : `<span class="pk-muted">Sama dengan ${label}</span>`;
+}
+
 function presFilter(f,el) {
   presFilterVal=f;
   document.querySelectorAll('.pres-filter-chip').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
-  renderPresList();
+  renderPresentasi();
 }
 
 function renderPresList() {
@@ -5412,6 +5516,7 @@ function applyRoleUI() {
   _lg('user-name').textContent = shortName(fbUser && fbUser.email);
   const rb = _lg('role-badge');
   rb.className = 'role-badge ' + (v ? 'rb-viewer' : 'rb-auditor');
+  rb.title = 'Masuk sebagai ' + shortName(fbUser && fbUser.email);
   rb.innerHTML = v ? ic('eye') + ' Mode lihat saja · BD' : ic('circle-check') + ' Auditor';
 }
 async function fetchRole(uid) {
