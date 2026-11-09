@@ -1107,6 +1107,10 @@ body.role-viewer .imp-box, body.role-viewer .pres-prio-label, body.role-viewer .
 .topbar-actions .btn, #sync-label { white-space:nowrap; }
 @media (max-width:1600px) { .user-name, .uc-out span { display:none; } .uc-out { padding-left:8px; padding-right:8px; } }
 @media (max-width:768px) { .role-badge { font-size:0; gap:0; padding:5px 7px; } .role-badge .ic { width:15px; height:15px; } }
+/* Tanggal naik temuan */
+.naik-hint { font-size:12px; color:var(--text3); margin-top:4px; }
+.kej-line { font-size:12px; color:var(--text3); margin-top:-2px; }
+.naik-none { color:#b45309; font-weight:700; border-bottom:1px dashed currentColor; cursor:help; }
 </style>
 </head>
 <body>
@@ -1342,6 +1346,11 @@ body.role-viewer .imp-box, body.role-viewer .pres-prio-label, body.role-viewer .
         <div class="form-group">
           <label class="form-label">Tanggal Kejadian *</label>
           <input type="date" class="form-input" id="f-tgl">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-tgl-naik">Tanggal Naik Temuan *</label>
+          <input type="date" class="form-input" id="f-tgl-naik">
+          <div class="naik-hint">Otomatis hari ini. Ubah jika temuan terlambat diinput.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Nama Auditor *</label>
@@ -1933,8 +1942,12 @@ body.role-viewer .imp-box, body.role-viewer .pres-prio-label, body.role-viewer .
     <div style="padding:4px 0">
       <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px">
         <div class="form-group">
-          <label class="form-label">Tanggal *</label>
+          <label class="form-label">Tanggal Kejadian *</label>
           <input type="date" class="form-input" id="edit-tgl">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-tgl-naik">Tanggal Naik Temuan</label>
+          <input type="date" class="form-input" id="edit-tgl-naik">
         </div>
         <div class="form-group">
           <label class="form-label">Nama Auditor *</label>
@@ -3020,7 +3033,7 @@ function getPresData() {
     const po = {HIGH:0, LOW:1, '':2, undefined:2};
     const pd = (po[a.priority]??2) - (po[b.priority]??2);
     if (pd !== 0) return pd;
-    return a.tgl.localeCompare(b.tgl);
+    return (tglNaikOf(a).tgl || a.tgl || '').localeCompare(tglNaikOf(b).tgl || b.tgl || '');
   });
 }
 
@@ -3198,9 +3211,10 @@ function renderPresList() {
       <div style="display:grid;grid-template-columns:200px 1fr 230px 128px;gap:0;align-items:stretch">
         <div style="padding:10px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:4px;background:var(--surface2)">
           <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:12px;font-weight:700;color:var(--text3)">${idx+1} · ${d.tgl.slice(5).replace('-','/')}</span>
+            <span style="font-size:12px;font-weight:700;color:var(--text3)">${idx+1} · ${(n => n.src === 'none' ? '<span class="naik-none" title="Tanggal naik belum dicatat. Lengkapi lewat Edit.">Naik: —</span>' : 'Naik ' + fmtTglPendek(n.tgl))(tglNaikOf(d))}</span>
             ${d.priority?priorityBadge(d.priority):''}
           </div>
+          <div class="kej-line">Kejadian ${fmtTglPendek(d.tgl)}</div>
           <div style="font-size:14px;font-weight:800;color:var(--primary)">${d.outlet}</div>
           <div style="font-size:14px;color:var(--text);font-weight:600">${d.staff}</div>
           <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:4px">
@@ -3867,7 +3881,8 @@ function resetForm() {
   ['f-tgl','f-auditor','f-outlet','f-div','f-staff','f-link','f-gdrive','f-ket','f-sanggahan'].forEach(id=>{
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById('f-tgl').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-tgl').value = tglLokal();
+  document.getElementById('f-tgl-naik').value = tglLokal();
   ['jenis','tindakan','week'].forEach(f => {
     const sel = document.getElementById('f-'+f+'-sel');
     const inp = document.getElementById('f-'+f+'-other');
@@ -3877,6 +3892,23 @@ function resetForm() {
     if (hid) hid.value = '';
   });
   resetPriority();
+}
+
+// ---------- Tanggal naik temuan (tanggal input ke dashboard, bisa diubah) ----------
+function tglLokal(d) { d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }   // tanggal WIB, bukan UTC
+const BLN_PENDEK = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function fmtTglPendek(t) { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t || ''); return m ? (+m[3]) + ' ' + BLN_PENDEK[+m[2] - 1] : (t || '—'); }
+// tanggal naik: yang diisi → waktu input yang tercatat sistem → belum dicatat
+function tglNaikOf(d) {
+  if (d && d.tgl_naik) return { tgl: d.tgl_naik, src: 'set' };
+  if (d && d.addedAt) return { tgl: tglLokal(new Date(d.addedAt)), src: 'auto' };
+  return { tgl: '', src: 'none' };
+}
+function cekTglNaik(naik, kejadian) {
+  if (!naik) return null;
+  if (kejadian && naik < kejadian) return 'Tanggal naik temuan tidak boleh lebih awal dari tanggal kejadian.';
+  if (naik > tglLokal()) return 'Tanggal naik temuan tidak boleh melebihi hari ini.';
+  return null;
 }
 
 function submitTemuan() {
@@ -3900,9 +3932,12 @@ function submitTemuan() {
     toast('Harap isi semua kolom wajib (*)','error'); return;
   }
   if (!w) { toast('Pilih Week terlebih dahulu','error'); return; }
+  const tgl_naik = document.getElementById('f-tgl-naik').value || tglLokal();
+  const errNaik = cekTglNaik(tgl_naik, tgl);
+  if (errNaik) { toast(errNaik, 'error'); document.getElementById('f-tgl-naik').focus(); return; }
 
   const id = Date.now() + Math.floor(Math.random() * 1000);
-  allData.push({id,tgl,aud,outlet,div,staff,jenis,tindakan,tindakan_direksi:tindakan,w,priority,link,gdrive,ket,sang,
+  allData.push({id,tgl,tgl_naik,aud,outlet,div,staff,jenis,tindakan,tindakan_direksi:tindakan,w,priority,link,gdrive,ket,sang,
     presented:false, hidden:false, addedAt:Date.now()});
   saveState();
   document.getElementById('badge-new').style.display = 'inline';
@@ -3920,7 +3955,8 @@ function showDetail(id) {
   document.getElementById('modal-ttl').textContent='Detail — '+d.staff;
   document.getElementById('modal-body').innerHTML=`
     <div class="detail-grid">
-      <div class="detail-field"><div class="detail-field-label">Tanggal</div><div class="detail-field-val">${d.tgl}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Tanggal Kejadian</div><div class="detail-field-val">${d.tgl}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Tanggal Naik</div><div class="detail-field-val">${(n => n.src === 'none' ? '<span class="naik-none">Belum dicatat</span>' : n.tgl)(tglNaikOf(d))}</div></div>
       <div class="detail-field"><div class="detail-field-label">Auditor</div><div class="detail-field-val">${d.aud}</div></div>
       <div class="detail-field"><div class="detail-field-label">Outlet</div><div class="detail-field-val">${d.outlet}</div></div>
       <div class="detail-field"><div class="detail-field-label">Divisi</div><div class="detail-field-val"><span class="pill div-${d.div}">${d.div}</span> <span style="font-size:12px;color:var(--text2)">${divLabel}</span></div></div>
@@ -3969,6 +4005,7 @@ function openEditModal(id) {
   // Populate all fields
   document.getElementById('edit-item-id').value = id;
   document.getElementById('edit-tgl').value = d.tgl || '';
+  document.getElementById('edit-tgl-naik').value = tglNaikOf(d).tgl;
   document.getElementById('edit-aud').value = d.aud || '';
   document.getElementById('edit-outlet').value = d.outlet || '';
   document.getElementById('edit-div').value = d.div || '';
@@ -4011,11 +4048,15 @@ function saveEdit() {
     toast('Tanggal, Staff, Outlet, dan Keterangan wajib diisi!', 'error');
     return;
   }
+  const tgl_naik = document.getElementById('edit-tgl-naik').value;
+  const errNaik = cekTglNaik(tgl_naik, tgl);
+  if (errNaik) { toast(errNaik, 'error'); return; }
 
   // Update item
   allData[idx] = {
     ...allData[idx],
     tgl,
+    tgl_naik,
     aud:              document.getElementById('edit-aud').value.trim(),
     outlet,
     div:              document.getElementById('edit-div').value,
@@ -5161,19 +5202,19 @@ function clearState() { confirmResetMonth(); }
 // ---------- Export temuan: Mingguan / Bulanan / Tahunan ----------
 const EXP_HDR = ['TANGGAL','NAMA AUDIT','OUTLET','DIVISI','NAMA STAFF','JENIS TEMUAN',
   'TINDAKAN AWAL','TINDAKAN DIREKSI','PRIORITAS','WEEK','KETERANGAN',
-  'Link Staging','BUKTI','SANGGAHAN STAFF','STATUS'];
+  'Link Staging','BUKTI','SANGGAHAN STAFF','STATUS','TANGGAL NAIK'];
 function expRow(d) {
   return [d.tgl, d.aud||'', d.outlet, d.div, d.staff, d.jenis,
     d.tindakan||'', d.tindakan_direksi||'', d.priority||'', d.w, d.ket,
     d.link||'', d.gdrive||'', d.sang||'',
-    d.presented ? 'Sudah Presentasi' : d.hidden ? 'Dibatalkan' : 'Belum Presentasi'];
+    d.presented ? 'Sudah Presentasi' : d.hidden ? 'Dibatalkan' : 'Belum Presentasi', tglNaikOf(d).tgl];
 }
 function buildAuditWorkbook(data, periodLabel, withMonth) {
   const wsData = [ withMonth ? [...EXP_HDR, 'BULAN'] : EXP_HDR,
     ...data.map(d => withMonth ? [...expRow(d), getCurrentMonthLabel(d._m)] : expRow(d)) ];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [{wch:12},{wch:10},{wch:18},{wch:6},{wch:24},{wch:20},{wch:16},{wch:20},{wch:10},{wch:8},{wch:60},{wch:45},{wch:40},{wch:40},{wch:20}].concat(withMonth ? [{wch:16}] : []);
+  ws['!cols'] = [{wch:12},{wch:10},{wch:18},{wch:6},{wch:24},{wch:20},{wch:16},{wch:20},{wch:10},{wch:8},{wch:60},{wch:45},{wch:40},{wch:40},{wch:20},{wch:14}].concat(withMonth ? [{wch:16}] : []);
   XLSX.utils.book_append_sheet(wb, ws, 'Master Operational');
   // Summary sheet
   const dc={}, jc={}, mc={};
@@ -5198,8 +5239,8 @@ function buildAuditWorkbook(data, periodLabel, withMonth) {
 }
 function csvCell(v) { const t = String(v ?? ''); return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }
 function buildAuditCSV(data, withMonth) {
-  const hdr = ['Tanggal','Auditor','Outlet','Divisi','Staff','Prioritas','Jenis','Tindakan','Week','Keterangan'].concat(withMonth ? ['Bulan'] : []);
-  const rows = data.map(d => [d.tgl,d.aud||'',d.outlet,d.div,d.staff||'',d.priority||'',d.jenis,d.tindakan_direksi||'',d.w,d.ket||''].concat(withMonth ? [getCurrentMonthLabel(d._m)] : []));
+  const hdr = ['Tanggal','Auditor','Outlet','Divisi','Staff','Prioritas','Jenis','Tindakan','Week','Keterangan','Tanggal Naik'].concat(withMonth ? ['Bulan'] : []);
+  const rows = data.map(d => [d.tgl,d.aud||'',d.outlet,d.div,d.staff||'',d.priority||'',d.jenis,d.tindakan_direksi||'',d.w,d.ket||'',tglNaikOf(d).tgl].concat(withMonth ? [getCurrentMonthLabel(d._m)] : []));
   return '\ufeff' + [hdr, ...rows].map(r => r.map(csvCell).join(',')).join('\n');
 }
 function downloadCSV(text, filename) {
@@ -5368,7 +5409,7 @@ function processImportFile(file) {
       if (!raw.length) { showImportStatus('Sheet kosong','error'); return; }
       const colMap = key => {
         const maps = {
-          tgl:['TANGGAL','tanggal','Tanggal'], aud:['NAMA AUDIT','AUDITOR','Auditor','NAMA AUDIT '],
+          tgl:['TANGGAL','tanggal','Tanggal'], tgl_naik:['TANGGAL NAIK','Tanggal Naik','tanggal naik'], aud:['NAMA AUDIT','AUDITOR','Auditor','NAMA AUDIT '],
           outlet:['OUTLET','Outlet','OUTLET '], div:['DIVISI','Divisi'],
           staff:['NAMA STAFF','Staff','staff'], jenis:['JENIS TEMUAN','Jenis'],
           tindakan:['TINDAKAN','TINDAKAN AWAL','Tindakan'], tindakan_direksi:['TINDAKAN DIREKSI'],
@@ -5397,7 +5438,7 @@ function processImportFile(file) {
         const w = isNaN(parseInt(wRaw))?(wRaw||1):parseInt(wRaw);
         const rawPrio = getV(r,'priority').toUpperCase();
         return {
-          id: maxId+90000+i, tgl:normDate(getV(r,'tgl')), aud:getV(r,'aud'),
+          id: maxId+90000+i, tgl:normDate(getV(r,'tgl')), tgl_naik:(getV(r,'tgl_naik') ? normDate(getV(r,'tgl_naik')) : ''), aud:getV(r,'aud'),
           outlet:getV(r,'outlet'), div:getV(r,'div').toUpperCase().slice(0,2),
           staff:getV(r,'staff'), jenis:getV(r,'jenis')||'Kelalaian SOP',
           tindakan, tindakan_direksi:tdir, priority:rawPrio==='HIGH'?'HIGH':rawPrio==='LOW'?'LOW':'',
@@ -5829,6 +5870,9 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'Enter') { e.preventDefault(); const first = _sdEl(key, 'list')?.querySelector('.search-dropdown-opt'); if (first) _sdSelect(key, first.dataset.val); }
 });
 
+
+// tanggal bawaan form input (WIB)
+(() => { const a = document.getElementById('f-tgl-naik'); if (a && !a.value) a.value = tglLokal(); const b = document.getElementById('f-tgl'); if (b && !b.value) b.value = tglLokal(); })();
 </script>
 </body>
 </html>
