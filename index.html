@@ -1111,6 +1111,19 @@ body.role-viewer .imp-box, body.role-viewer .pres-prio-label, body.role-viewer .
 .naik-hint { font-size:12px; color:var(--text3); margin-top:4px; }
 .kej-line { font-size:12px; color:var(--text3); margin-top:-2px; }
 .naik-none { color:#b45309; font-weight:700; border-bottom:1px dashed currentColor; cursor:help; }
+/* Kolom info kartu presentasi */
+.pi { display:flex; flex-direction:column; }
+.pi-top { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:7px; }
+.pi-no { font-size:12px; font-weight:700; color:var(--text2); background:#e2e8f0; border-radius:6px; padding:1px 7px; }
+.pi-staff { font-size:15px; font-weight:800; color:var(--text); line-height:1.3; overflow-wrap:anywhere; }
+.pi-outlet { display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin-top:3px; font-size:13px; font-weight:700; color:var(--primary); }
+.pi-outlet .ic { width:14px; height:14px; }
+.pi-jenis { margin-top:7px; }
+.pi-meta { display:grid; grid-template-columns:auto 1fr; gap:1px 8px; margin-top:9px; padding-top:7px; border-top:1px solid var(--border); font-size:12.5px; line-height:1.55; }
+.pi-meta > span { color:var(--text3); }
+.pi-meta > b { font-weight:600; color:var(--text); }
+.pi-late { color:#b45309; font-weight:700; font-size:12px; white-space:nowrap; }
+.pi-none { color:#b45309; font-weight:600; font-style:italic; cursor:help; }
 </style>
 </head>
 <body>
@@ -3185,6 +3198,29 @@ function presFilter(f,el) {
   renderPresentasi();
 }
 
+// Kolom info kartu presentasi: #nomor & prioritas → staff → outlet + divisi → jenis → kejadian, naik, auditor (berlabel)
+const HARI_PENDEK = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+function tglLokalDari(t) { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+function fmtTglHari(t) { const d = tglLokalDari(t); return d ? HARI_PENDEK[d.getDay()] + ', ' + d.getDate() + ' ' + BLN_PENDEK[d.getMonth()] : (t || '—'); }
+function presInfoHtml(d, idx, jc) {
+  const n = tglNaikOf(d), k = tglLokalDari(d.tgl), nk = tglLokalDari(n.tgl);
+  const lag = n.src !== 'none' && k && nk ? Math.round((nk - k) / 86400000) : 0;
+  const naik = n.src === 'none'
+    ? '<span class="pi-none" title="Tanggal naik belum dicatat. Lengkapi lewat Edit.">Belum dicatat</span>'
+    : fmtTglHari(n.tgl) + (lag > 0 ? ` <span class="pi-late" title="Diinput ${lag} hari setelah kejadian">+${lag} hari</span>` : '');
+  return `<div class="pi">
+    <div class="pi-top"><span class="pi-no">#${idx + 1}</span>${d.priority ? priorityBadge(d.priority) : ''}</div>
+    <div class="pi-staff">${htmlEsc(d.staff || '—')}</div>
+    <div class="pi-outlet">${ic('store')}<span>${htmlEsc(d.outlet || '—')}</span>${d.div ? `<span class="pill div-${htmlEsc(d.div)}" style="font-size:12px;padding:1px 7px">${htmlEsc(d.div)}</span>` : ''}</div>
+    <div class="pi-jenis"><span class="temuan-type ${jc.cls || ''}" style="font-size:12px;padding:2px 7px">${htmlEsc(d.jenis || '')}</span></div>
+    <div class="pi-meta">
+      <span>Kejadian</span><b>${fmtTglHari(d.tgl)}</b>
+      <span>Naik</span><b>${naik}</b>
+      <span>Auditor</span><b>${htmlEsc(d.aud || '—')}</b>
+    </div>
+  </div>`;
+}
+
 function renderPresList() {
   const data = getPresData();
   const list = document.getElementById('pres-list');
@@ -3209,19 +3245,8 @@ function renderPresList() {
     const rowCls = baseRowCls+(d.priority==='HIGH'?' priority-high-row':d.priority==='LOW'?' priority-low-row':'');
     return `<div class="${rowCls}" style="--rc:${jc.color};margin-bottom:6px">
       <div style="display:grid;grid-template-columns:200px 1fr 230px 128px;gap:0;align-items:stretch">
-        <div style="padding:10px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:4px;background:var(--surface2)">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:12px;font-weight:700;color:var(--text3)">${idx+1} · ${(n => n.src === 'none' ? '<span class="naik-none" title="Tanggal naik belum dicatat. Lengkapi lewat Edit.">Naik: —</span>' : 'Naik ' + fmtTglPendek(n.tgl))(tglNaikOf(d))}</span>
-            ${d.priority?priorityBadge(d.priority):''}
-          </div>
-          <div class="kej-line">Kejadian ${fmtTglPendek(d.tgl)}</div>
-          <div style="font-size:14px;font-weight:800;color:var(--primary)">${d.outlet}</div>
-          <div style="font-size:14px;color:var(--text);font-weight:600">${d.staff}</div>
-          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:4px">
-            <span class="pill div-${d.div}" style="font-size:12px;padding:1px 7px">${d.div}</span>
-            <span class="temuan-type ${jc.cls}" style="font-size:12px;padding:2px 7px">${d.jenis}</span>
-          </div>
-          <div style="font-size:12px;color:var(--text3)">${d.aud||''}</div>
+        <div style="padding:10px 12px;border-right:1px solid var(--border);background:var(--surface2)">
+          ${presInfoHtml(d, idx, jc)}
         </div>
         <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px">
           <div style="font-size:15px;line-height:1.6;color:var(--text)">${d.ket}</div>
